@@ -1,0 +1,678 @@
+{
+  "identifier": "run.vineyard.pluginpacks.github",
+  "content_type": "vineyard:pluginpack",
+  "name": "GitHub",
+  "version": "1.0.0",
+  "description": "Recovers the people behind public GitHub activity. Expands an account into its repositories, then reads commit metadata across every branch and tag — never the code — for the email addresses, display names and former usernames contributors left in it. Also covers gists, organisation membership, activity hours, worked-on forks, and the domain a repository publishes on. Needs a GitHub token.",
+  "author": {
+    "name": "VINEYARD",
+    "url": "https://github.com/Vineyard-Intelligence"
+  },
+  "license": "Apache-2.0",
+  "icon": "github",
+  "platforms": {
+    "primary": "web",
+    "web": {
+      "runtime": "sandbox-js",
+      "entry": "dist/pack.mjs"
+    },
+    "desktop": {
+      "runtime": "sandbox-js",
+      "entry": "dist/pack.mjs",
+      "min_app_version": "0.1.0"
+    }
+  },
+  "distribution": {
+    "kind": "git",
+    "repository": "https://github.com/Vineyard-Intelligence/pluginpack-github",
+    "ref": "v1.0.0",
+    "path": "plugins/github.manifest.json"
+  },
+  "plugins": [
+    {
+      "identifier": "run.vineyard.plugins.github_account_repos",
+      "content_type": "vineyard:plugin",
+      "name": "GitHub Account Repositories",
+      "version": "1.0.0",
+      "description": "Expands a GitHub account (or a github.com profile URL) into its repositories, one URL node each, and enriches the account with the profile GitHub publishes — display name, company, location, website, and the numeric account id that survives a username change. Each repository node carries its commit count, so the cost of running Commit Identities on it is visible before you do. Optionally also finds repositories the account committed to but does not own.",
+      "icon": "folder-git-2",
+      "platforms": {
+        "primary": "web",
+        "web": {
+          "runtime": "sandbox-js",
+          "entry": "dist/pack.mjs"
+        },
+        "desktop": {
+          "runtime": "sandbox-js",
+          "entry": "dist/pack.mjs",
+          "min_app_version": "0.1.0"
+        }
+      },
+      "io": {
+        "consumes": [
+          {
+            "typepack": "run.vineyard.typepacks.identity",
+            "category": "identity",
+            "name": "account"
+          },
+          {
+            "typepack": "run.vineyard.typepacks.identity",
+            "category": "identity",
+            "name": "handle"
+          },
+          {
+            "typepack": "run.vineyard.typepacks.infrastructure",
+            "category": "web",
+            "name": "url"
+          }
+        ],
+        "produces": [
+          {
+            "typepack": "run.vineyard.typepacks.infrastructure",
+            "category": "web",
+            "name": "url"
+          },
+          {
+            "typepack": "run.vineyard.typepacks.identity",
+            "category": "identity",
+            "name": "account"
+          },
+          {
+            "typepack": "run.vineyard.typepacks.identity",
+            "category": "identity",
+            "name": "organization"
+          }
+        ]
+      },
+      "params": {
+        "type": "object",
+        "properties": {
+          "include_forks": {
+            "type": "boolean",
+            "title": "Include forked repositories",
+            "default": false,
+            "description": "Forks are copies of somebody else’s project. Scanning one for commit identities returns the UPSTREAM contributors, who have nothing to do with this account."
+          },
+          "include_contributed": {
+            "type": "boolean",
+            "title": "Also find repositories they only contributed to",
+            "default": true,
+            "description": "Uses commit search to find repositories the account committed to without owning — often where the work-account and organisation activity is. Commit search also indexes forked copies, so on very active accounts some results are mirrors rather than real contributions."
+          }
+        }
+      },
+      "scopes": {
+        "graph": [
+          "node:read",
+          "node:create",
+          "node:update",
+          "edge:create"
+        ],
+        "network": [
+          {
+            "endpoint": "https://api.github.com/graphql",
+            "methods": [
+              "POST"
+            ],
+            "purpose": "Read the public profile and repository list of the selected account."
+          },
+          {
+            "endpoint": "https://api.github.com/search",
+            "methods": [
+              "GET"
+            ],
+            "purpose": "Find repositories the account committed to but does not own."
+          }
+        ],
+        "config": [
+          {
+            "key": "token",
+            "label": "GitHub personal access token",
+            "type": "string",
+            "secret": true,
+            "scope": "user",
+            "optional": false
+          }
+        ]
+      },
+      "lifecycle": {
+        "persistence": "opt-in",
+        "controls": [
+          "progress",
+          "cancel"
+        ],
+        "progress": "determinate"
+      }
+    },
+    {
+      "identifier": "run.vineyard.plugins.github_commit_identities",
+      "content_type": "vineyard:plugin",
+      "name": "GitHub Commit Identities",
+      "version": "1.0.0",
+      "description": "Reads the commit metadata of every branch and tag of the selected repositories — never the code — and recovers the identities in it: the email address each contributor committed under, their display name, their GitHub account, and any previous username still embedded in an older relay address. Addresses that belong to no GitHub account are kept rather than dropped: those are the raw local git configurations, and they are usually the ones worth having. Enabling email privacy on GitHub does not rewrite history, so a repository that predates it still carries the real address.",
+      "icon": "git-commit-horizontal",
+      "platforms": {
+        "primary": "web",
+        "web": {
+          "runtime": "sandbox-js",
+          "entry": "dist/pack.mjs"
+        },
+        "desktop": {
+          "runtime": "sandbox-js",
+          "entry": "dist/pack.mjs",
+          "min_app_version": "0.1.0"
+        }
+      },
+      "io": {
+        "consumes": [
+          {
+            "typepack": "run.vineyard.typepacks.infrastructure",
+            "category": "web",
+            "name": "url"
+          }
+        ],
+        "produces": [
+          {
+            "typepack": "run.vineyard.typepacks.identity",
+            "category": "identity",
+            "name": "account"
+          },
+          {
+            "typepack": "run.vineyard.typepacks.identity",
+            "category": "identity",
+            "name": "email_address"
+          },
+          {
+            "typepack": "run.vineyard.typepacks.identity",
+            "category": "identity",
+            "name": "handle"
+          }
+        ]
+      },
+      "params": {
+        "type": "object",
+        "properties": {
+          "all_refs": {
+            "type": "boolean",
+            "title": "Scan every branch and tag",
+            "default": true,
+            "description": "Off scans only the default branch, which is what the REST commit list would give you. On a large public repository the difference measured ~1,000 extra commits and a handful of contributors who appear nowhere else."
+          }
+        }
+      },
+      "scopes": {
+        "graph": [
+          "node:read",
+          "node:create",
+          "node:update",
+          "edge:create"
+        ],
+        "network": [
+          {
+            "endpoint": "https://api.github.com/graphql",
+            "methods": [
+              "POST"
+            ],
+            "purpose": "Read commit metadata (author, email, date) for the selected repositories."
+          }
+        ],
+        "config": [
+          {
+            "key": "token",
+            "label": "GitHub personal access token",
+            "type": "string",
+            "secret": true,
+            "scope": "user",
+            "optional": false
+          }
+        ]
+      },
+      "lifecycle": {
+        "persistence": "opt-in",
+        "controls": [
+          "progress",
+          "cancel"
+        ],
+        "progress": "determinate"
+      }
+    },
+    {
+      "identifier": "run.vineyard.plugins.github_activity_timeline",
+      "content_type": "vineyard:plugin",
+      "name": "GitHub Activity Timeline",
+      "version": "1.0.0",
+      "description": "Reads an account's recent public events and records which UTC hours it is active in, as fields on the account itself rather than as new nodes. Also records how many events the sample held and the real first and last timestamps, because GitHub caps this feed at roughly 300 events over 90 days — so a busy account's picture may cover a week and a quiet one's three months. Automation produces the tightest, most convincing-looking distributions of all, so read a sharp result as a scheduler until something else says otherwise.",
+      "icon": "clock",
+      "platforms": {
+        "primary": "web",
+        "web": {
+          "runtime": "sandbox-js",
+          "entry": "dist/pack.mjs"
+        },
+        "desktop": {
+          "runtime": "sandbox-js",
+          "entry": "dist/pack.mjs",
+          "min_app_version": "0.1.0"
+        }
+      },
+      "io": {
+        "consumes": [
+          {
+            "typepack": "run.vineyard.typepacks.identity",
+            "category": "identity",
+            "name": "account"
+          },
+          {
+            "typepack": "run.vineyard.typepacks.identity",
+            "category": "identity",
+            "name": "handle"
+          },
+          {
+            "typepack": "run.vineyard.typepacks.infrastructure",
+            "category": "web",
+            "name": "url"
+          }
+        ],
+        "produces": [
+          {
+            "typepack": "run.vineyard.typepacks.identity",
+            "category": "identity",
+            "name": "account"
+          }
+        ]
+      },
+      "scopes": {
+        "graph": [
+          "node:read",
+          "node:create",
+          "node:update",
+          "edge:create"
+        ],
+        "network": [
+          {
+            "endpoint": "https://api.github.com/users",
+            "methods": [
+              "GET"
+            ],
+            "purpose": "Read the public event feed of the selected account."
+          }
+        ],
+        "config": [
+          {
+            "key": "token",
+            "label": "GitHub personal access token",
+            "type": "string",
+            "secret": true,
+            "scope": "user",
+            "optional": false
+          }
+        ]
+      },
+      "lifecycle": {
+        "persistence": "opt-in",
+        "controls": [
+          "progress",
+          "cancel"
+        ],
+        "progress": "determinate"
+      }
+    },
+    {
+      "identifier": "run.vineyard.plugins.github_gists",
+      "content_type": "vineyard:plugin",
+      "name": "GitHub Gists",
+      "version": "1.0.0",
+      "description": "Collects an account's public gists as URL nodes, carrying the file names, languages, description and dates as properties. Gists are where configuration fragments, scratch scripts and pasted output tend to end up, so they often hold detail the account's repositories do not.",
+      "icon": "file-code",
+      "platforms": {
+        "primary": "web",
+        "web": {
+          "runtime": "sandbox-js",
+          "entry": "dist/pack.mjs"
+        },
+        "desktop": {
+          "runtime": "sandbox-js",
+          "entry": "dist/pack.mjs",
+          "min_app_version": "0.1.0"
+        }
+      },
+      "io": {
+        "consumes": [
+          {
+            "typepack": "run.vineyard.typepacks.identity",
+            "category": "identity",
+            "name": "account"
+          },
+          {
+            "typepack": "run.vineyard.typepacks.identity",
+            "category": "identity",
+            "name": "handle"
+          },
+          {
+            "typepack": "run.vineyard.typepacks.infrastructure",
+            "category": "web",
+            "name": "url"
+          }
+        ],
+        "produces": [
+          {
+            "typepack": "run.vineyard.typepacks.infrastructure",
+            "category": "web",
+            "name": "url"
+          }
+        ]
+      },
+      "params": {
+        "type": "object",
+        "properties": {
+          "max_gists": {
+            "type": "integer",
+            "title": "Maximum gists per account",
+            "default": 300,
+            "minimum": 1,
+            "maximum": 3000,
+            "description": "Read in pages of 100. Most accounts hold far fewer than this."
+          }
+        }
+      },
+      "scopes": {
+        "graph": [
+          "node:read",
+          "node:create",
+          "edge:create"
+        ],
+        "network": [
+          {
+            "endpoint": "https://api.github.com/users",
+            "methods": [
+              "GET"
+            ],
+            "purpose": "List the public gists of the selected account."
+          }
+        ],
+        "config": [
+          {
+            "key": "token",
+            "label": "GitHub personal access token",
+            "type": "string",
+            "secret": true,
+            "scope": "user",
+            "optional": false
+          }
+        ]
+      },
+      "lifecycle": {
+        "persistence": "opt-in",
+        "controls": [
+          "progress",
+          "cancel"
+        ],
+        "progress": "determinate"
+      }
+    },
+    {
+      "identifier": "run.vineyard.plugins.github_org_members",
+      "content_type": "vineyard:plugin",
+      "name": "GitHub Organisation Members",
+      "version": "1.0.0",
+      "description": "Lists the members of a GitHub organisation who have made their membership public, as account nodes linked to the organisation. Membership is private by default, so this is a lower bound rather than a roster — the total GitHub reports is recorded on the organisation node so the gap is visible.",
+      "icon": "users",
+      "platforms": {
+        "primary": "web",
+        "web": {
+          "runtime": "sandbox-js",
+          "entry": "dist/pack.mjs"
+        },
+        "desktop": {
+          "runtime": "sandbox-js",
+          "entry": "dist/pack.mjs",
+          "min_app_version": "0.1.0"
+        }
+      },
+      "io": {
+        "consumes": [
+          {
+            "typepack": "run.vineyard.typepacks.identity",
+            "category": "identity",
+            "name": "organization"
+          },
+          {
+            "typepack": "run.vineyard.typepacks.infrastructure",
+            "category": "web",
+            "name": "url"
+          }
+        ],
+        "produces": [
+          {
+            "typepack": "run.vineyard.typepacks.identity",
+            "category": "identity",
+            "name": "account"
+          },
+          {
+            "typepack": "run.vineyard.typepacks.identity",
+            "category": "identity",
+            "name": "organization"
+          }
+        ]
+      },
+      "params": {
+        "type": "object",
+        "properties": {
+          "max_members": {
+            "type": "integer",
+            "title": "Maximum members",
+            "default": 500,
+            "minimum": 1,
+            "maximum": 5000,
+            "description": "Read in pages of 100. What was taken versus what exists is recorded on the organisation node."
+          }
+        }
+      },
+      "scopes": {
+        "graph": [
+          "node:read",
+          "node:create",
+          "node:update",
+          "edge:create"
+        ],
+        "network": [
+          {
+            "endpoint": "https://api.github.com/orgs",
+            "methods": [
+              "GET"
+            ],
+            "purpose": "List the public members of the selected organisation."
+          }
+        ],
+        "config": [
+          {
+            "key": "token",
+            "label": "GitHub personal access token",
+            "type": "string",
+            "secret": true,
+            "scope": "user",
+            "optional": false
+          }
+        ]
+      },
+      "lifecycle": {
+        "persistence": "opt-in",
+        "controls": [
+          "progress",
+          "cancel"
+        ],
+        "progress": "determinate"
+      }
+    },
+    {
+      "identifier": "run.vineyard.plugins.github_forks",
+      "content_type": "vineyard:plugin",
+      "name": "GitHub Forks With Own Commits",
+      "version": "1.0.0",
+      "description": "Finds the forks of a repository that have been pushed to since they were created, and adds each one as a URL node with its owner's account. Untouched forks — the large majority — are left out, because a fork button press says nothing about the person who pressed it. Work done in a fork never appears in the upstream history unless a pull request lands, so these owners are mostly people the upstream commit scan cannot reach; run Commit Identities on a fork URL to recover the identity behind it.",
+      "icon": "git-fork",
+      "platforms": {
+        "primary": "web",
+        "web": {
+          "runtime": "sandbox-js",
+          "entry": "dist/pack.mjs"
+        },
+        "desktop": {
+          "runtime": "sandbox-js",
+          "entry": "dist/pack.mjs",
+          "min_app_version": "0.1.0"
+        }
+      },
+      "io": {
+        "consumes": [
+          {
+            "typepack": "run.vineyard.typepacks.infrastructure",
+            "category": "web",
+            "name": "url"
+          }
+        ],
+        "produces": [
+          {
+            "typepack": "run.vineyard.typepacks.infrastructure",
+            "category": "web",
+            "name": "url"
+          },
+          {
+            "typepack": "run.vineyard.typepacks.identity",
+            "category": "identity",
+            "name": "account"
+          }
+        ]
+      },
+      "params": {
+        "type": "object",
+        "properties": {
+          "max_forks": {
+            "type": "integer",
+            "title": "Maximum forks to examine",
+            "default": 200,
+            "minimum": 1,
+            "maximum": 5000,
+            "description": "How many forks to look at, newest first, in pages of 100. A popular repository can have tens of thousands; what was examined versus what exists is recorded on the repository node."
+          },
+          "worked_only": {
+            "type": "boolean",
+            "title": "Only forks that were pushed to",
+            "default": true,
+            "description": "Turning this off adds every fork owner, most of whom only clicked a button. Measured: 58% of forks were never touched after creation."
+          }
+        }
+      },
+      "scopes": {
+        "graph": [
+          "node:read",
+          "node:create",
+          "node:update",
+          "edge:create"
+        ],
+        "network": [
+          {
+            "endpoint": "https://api.github.com/repos",
+            "methods": [
+              "GET"
+            ],
+            "purpose": "List the forks of the selected repository."
+          }
+        ],
+        "config": [
+          {
+            "key": "token",
+            "label": "GitHub personal access token",
+            "type": "string",
+            "secret": true,
+            "scope": "user",
+            "optional": false
+          }
+        ]
+      },
+      "lifecycle": {
+        "persistence": "opt-in",
+        "controls": [
+          "progress",
+          "cancel"
+        ],
+        "progress": "determinate"
+      }
+    },
+    {
+      "identifier": "run.vineyard.plugins.github_pages_domain",
+      "content_type": "vineyard:plugin",
+      "name": "GitHub Pages Domain",
+      "version": "1.0.0",
+      "description": "Checks whether each selected repository publishes a GitHub Pages site and, when it does, adds the domain it serves on as a node linked to the repository. This is the step that takes an investigation off GitHub: the resulting domain is the input the DNS, certificate and address plugins already know how to follow.",
+      "icon": "globe",
+      "platforms": {
+        "primary": "web",
+        "web": {
+          "runtime": "sandbox-js",
+          "entry": "dist/pack.mjs"
+        },
+        "desktop": {
+          "runtime": "sandbox-js",
+          "entry": "dist/pack.mjs",
+          "min_app_version": "0.1.0"
+        }
+      },
+      "io": {
+        "consumes": [
+          {
+            "typepack": "run.vineyard.typepacks.infrastructure",
+            "category": "web",
+            "name": "url"
+          }
+        ],
+        "produces": [
+          {
+            "typepack": "run.vineyard.typepacks.infrastructure",
+            "category": "infrastructure",
+            "name": "domain"
+          },
+          {
+            "typepack": "run.vineyard.typepacks.infrastructure",
+            "category": "web",
+            "name": "url"
+          }
+        ]
+      },
+      "scopes": {
+        "graph": [
+          "node:read",
+          "node:create",
+          "edge:create"
+        ],
+        "network": [
+          {
+            "endpoint": "https://api.github.com/repos",
+            "methods": [
+              "GET"
+            ],
+            "purpose": "Read the GitHub Pages configuration of the selected repository."
+          }
+        ],
+        "config": [
+          {
+            "key": "token",
+            "label": "GitHub personal access token",
+            "type": "string",
+            "secret": true,
+            "scope": "user",
+            "optional": false
+          }
+        ]
+      },
+      "lifecycle": {
+        "persistence": "opt-in",
+        "controls": [
+          "progress",
+          "cancel"
+        ],
+        "progress": "determinate"
+      }
+    }
+  ]
+}

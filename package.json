@@ -1,0 +1,13 @@
+{
+  "name": "pluginpack-github",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs && node gen-manifest.mjs",
+    "typecheck": "tsc --noEmit --strict --target es2022 --module esnext --moduleResolution bundler --skipLibCheck src/main.ts"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0",
+    "typescript": "^5.7.0"
+  }
+}
