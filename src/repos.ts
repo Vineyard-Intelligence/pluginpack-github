@@ -10,7 +10,7 @@
 // in front of the analyst, rather than in a silent truncation afterwards.
 import { definePlugin } from './sdk';
 import type { HostContext, RunResult, GraphNode } from './sdk';
-import { GH_PLATFORM, gql, rest, loginOf, abortIf } from './gh';
+import { ghToken, GH_PLATFORM, gql, rest, loginOf, abortIf } from './gh';
 
 const PROFILE_QUERY = `query($login:String!,$n:Int!,$after:String){
   repositoryOwner(login:$login){
@@ -52,7 +52,7 @@ export const accountRepos = definePlugin({
         identifier: 'run.vineyard.plugins.github_account_repos',
         content_type: 'vineyard:plugin',
         name: 'GitHub Account Repositories',
-        version: '1.0.0',
+        version: '1.1.0',
         description:
             'Expands a GitHub account (or a github.com profile URL) into its repositories, one URL node each, and enriches the account with the profile GitHub publishes — display name, company, location, website, and the numeric account id that survives a username change. Each repository node carries its commit count, so the cost of running Commit Identities on it is visible before you do. Optionally also finds repositories the account committed to but does not own.',
         icon: 'folder-git-2',
@@ -125,6 +125,11 @@ export const accountRepos = definePlugin({
     async run(ctx: HostContext): Promise<RunResult> {
         const ids = ctx.input.selection;
         if (!ids.length) return { summary: 'Select a GitHub account, handle, or profile URL first', counts: {} };
+        // Token first, before anything about the selection is judged. It is a precondition of the
+        // whole run rather than of one node, and when both are wrong "this pack has no token" is the
+        // message that lets the analyst act — checking the selection first made the reported problem
+        // depend on which node happened to be selected.
+        ghToken(ctx);
 
         const includeForks = ctx.params?.include_forks === true;
         const includeContributed = ctx.params?.include_contributed !== false;
@@ -134,6 +139,7 @@ export const accountRepos = definePlugin({
         let contributed = 0;
         let orgs = 0;
         let skipped = 0;
+        let gone = 0;           // logins GitHub says do not exist — answered, and empty
         let reachedLogins = 0;
 
         // The host calls run() ONCE with the whole selection; walking it is this plugin's job.
@@ -175,8 +181,11 @@ export const accountRepos = definePlugin({
                 if (abortIf(ctx)) break;
             }
             if (!owner) {
-                // A login that resolves to nothing is a fact worth stopping on, not a quiet zero.
-                throw new Error(`GitHub has no user or organisation called "${login}"`);
+                // GitHub answered, and the answer is "no such account" — a processed request with an
+                // empty result, not a failure. Throwing here killed the whole run over one deleted or
+                // renamed account and discarded every other repository already collected.
+                gone++;
+                continue;
             }
 
             const isOrg = owner.__typename === 'Organization';
@@ -293,8 +302,9 @@ export const accountRepos = definePlugin({
                 `${repos} repositor${repos === 1 ? 'y' : 'ies'} from ${reachedLogins} account(s)` +
                 (contributed ? `, ${contributed} contributed-to` : '') +
                 (orgs ? `, ${orgs} organisation(s)` : '') +
+                (gone ? `, ${gone} account(s) no longer exist on GitHub` : '') +
                 (skipped ? ` — ${skipped} selected node(s) were not GitHub accounts` : ''),
-            counts: { accounts, repositories: repos, contributed, organizations: orgs, skipped },
+            counts: { accounts, repositories: repos, contributed, organizations: orgs, gone, skipped },
         };
     },
 });

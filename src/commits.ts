@@ -27,7 +27,7 @@
 //     address. Not used anywhere.
 import { definePlugin } from './sdk';
 import type { HostContext, RunResult, GraphNode } from './sdk';
-import { GH_PLATFORM, gql, repoOf, classifyEmail, domainOf, abortIf } from './gh';
+import { ghToken, GH_PLATFORM, gql, repoOf, classifyEmail, domainOf, abortIf } from './gh';
 
 /** Above this the walk is long enough that the analyst should narrow it deliberately rather than
  *  discover the cost by waiting. The Linux kernel is ~1.4M commits: ~700 requests. */
@@ -80,7 +80,7 @@ export const commitIdentities = definePlugin({
         identifier: 'run.vineyard.plugins.github_commit_identities',
         content_type: 'vineyard:plugin',
         name: 'GitHub Commit Identities',
-        version: '1.2.0',
+        version: '1.3.0',
         description:
             'Reads the commit metadata of every branch and tag of the selected repositories — never the code — and recovers the identities in it: the email address each contributor committed under, their display name, their GitHub account, and any previous username still embedded in an older relay address. Addresses that belong to no GitHub account are kept rather than dropped: those are the raw local git configurations, and they are usually the ones worth having. Enabling email privacy on GitHub does not rewrite history, so a repository that predates it still carries the real address.',
         icon: 'git-commit-horizontal',
@@ -137,12 +137,19 @@ export const commitIdentities = definePlugin({
     async run(ctx: HostContext): Promise<RunResult> {
         const ids = ctx.input.selection;
         if (!ids.length) return { summary: 'Select a GitHub repository URL first', counts: {} };
+        // Token first, before anything about the selection is judged. It is a precondition of the
+        // whole run rather than of one node, and when both are wrong "this pack has no token" is the
+        // message that lets the analyst act — checking the selection first made the reported problem
+        // depend on which node happened to be selected.
+        ghToken(ctx);
         const allRefs = ctx.params?.all_refs !== false;
 
         let accounts = 0;
         let emails = 0;
         let handles = 0;
-        let scannedRepos = 0;
+        let scannedRepos = 0;   // repositories GitHub answered for — processed, whatever they held
+        let emptyRepos = 0;     // of those, ones with no refs at all: a real answer, not a failure
+        let goneRepos = 0;      // selected URLs GitHub says are not repositories (deleted/renamed)
         let scannedCommits = 0;
         let truncatedRefs = 0;
 
@@ -204,6 +211,7 @@ export const commitIdentities = definePlugin({
             });
 
             // ---- refs and size ---------------------------------------------------------------
+            let missing = false;
             const refNames: string[] = [];
             let defaultRef: string | null = null;
             let totalCommits = 0;
@@ -211,7 +219,9 @@ export const commitIdentities = definePlugin({
             for (let page = 0; page < 10; page++) {
                 const d = await gql(ctx, REFS_QUERY, { owner: repo.owner, name: repo.name, after });
                 const r = d?.repository;
-                if (!r) throw new Error(`GitHub has no repository ${repo.owner}/${repo.name}`);
+                // Answered with "no such repository": processed, empty. One dead URL in a large
+                // selection must not discard everything collected before it.
+                if (!r) { missing = true; break; }
                 if (r.isEmpty) break;
                 if (page === 0) {
                     defaultRef = r.defaultBranchRef?.name ? `refs/heads/${r.defaultBranchRef.name}` : null;
@@ -230,11 +240,26 @@ export const commitIdentities = definePlugin({
                 after = r.refs.pageInfo.endCursor;
             }
 
+            if (missing) {
+                goneRepos++;
+                continue;
+            }
+
+            // The repository answered, so it HAS been processed — count it before the walk, not
+            // after. Counting only repositories that yielded commits made an empty repository
+            // indistinguishable from a mis-targeted selection: pick three empty ones and the run
+            // ended with "none of the selected nodes is a GitHub repository URL", which was both
+            // wrong and unfixable by the analyst.
+            scannedRepos++;
+
             // Default branch first: it holds the bulk, so every later ref mostly re-walks known
             // commits and stops almost immediately.
             let targets = allRefs ? refNames : defaultRef ? [defaultRef] : [];
             if (defaultRef) targets = [defaultRef, ...targets.filter((n) => n !== defaultRef)];
-            if (!targets.length) continue;   // an empty repository: no refs to walk
+            if (!targets.length) {
+                emptyRepos++;
+                continue; // an empty repository: a real, finished answer with nothing in it
+            }
 
             // ---- walk ------------------------------------------------------------------------
             const seenOids = new Set<string>();
@@ -295,7 +320,6 @@ export const commitIdentities = definePlugin({
                 }
             }
 
-            scannedRepos++;
             scannedCommits += rows.length;
 
             // ---- who is a bot ----------------------------------------------------------------
@@ -425,7 +449,9 @@ export const commitIdentities = definePlugin({
             });
         }
 
-        if (!scannedRepos) {
+        // THROW ONLY WHEN THE REQUEST COULD NOT BE PROCESSED — nothing selected was a repository.
+        // A repository that answered and held nothing is a finished answer and returns normally.
+        if (!scannedRepos && !goneRepos) {
             throw new Error(
                 `None of the ${ids.length} selected node(s) is a GitHub repository URL — select nodes ` +
                     `whose url looks like https://github.com/<owner>/<repo>.`,
@@ -436,6 +462,8 @@ export const commitIdentities = definePlugin({
             summary:
                 `${scannedCommits.toLocaleString()} commits across ${scannedRepos} repositor${scannedRepos === 1 ? 'y' : 'ies'}: ` +
                 `${accounts} account(s), ${emails} email address(es)` +
+                (emptyRepos ? `, ${emptyRepos} repositor${emptyRepos === 1 ? 'y was' : 'ies were'} empty` : '') +
+                (goneRepos ? `, ${goneRepos} no longer exist on GitHub` : '') +
                 (handles ? `, ${handles} former username(s)` : '') +
                 (truncatedRefs ? ` — ${truncatedRefs} ref(s) hit the page limit` : '') +
                 (skipped ? ` — ${skipped} selected node(s) were not repositories` : ''),
@@ -445,6 +473,8 @@ export const commitIdentities = definePlugin({
                 accounts,
                 emails,
                 former_usernames: handles,
+                empty_repositories: emptyRepos,
+                gone_repositories: goneRepos,
                 skipped,
             },
         };

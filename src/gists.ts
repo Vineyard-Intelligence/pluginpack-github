@@ -8,14 +8,14 @@
 // by construction, so the file names ride along as a property instead.
 import { definePlugin } from './sdk';
 import type { HostContext, RunResult } from './sdk';
-import { GH_PLATFORM, rest, loginOf, abortIf } from './gh';
+import { ghToken, GH_PLATFORM, rest, loginOf, abortIf } from './gh';
 
 export const gists = definePlugin({
     manifest: {
         identifier: 'run.vineyard.plugins.github_gists',
         content_type: 'vineyard:plugin',
         name: 'GitHub Gists',
-        version: '1.0.0',
+        version: '1.1.0',
         description:
             'Collects an account\'s public gists as URL nodes, carrying the file names, languages, description and dates as properties. Gists are where configuration fragments, scratch scripts and pasted output tend to end up, so they often hold detail the account\'s repositories do not.',
         icon: 'file-code',
@@ -73,6 +73,11 @@ export const gists = definePlugin({
     async run(ctx: HostContext): Promise<RunResult> {
         const ids = ctx.input.selection;
         if (!ids.length) return { summary: 'Select a GitHub account first', counts: {} };
+        // Token first, before anything about the selection is judged. It is a precondition of the
+        // whole run rather than of one node, and when both are wrong "this pack has no token" is the
+        // message that lets the analyst act — checking the selection first made the reported problem
+        // depend on which node happened to be selected.
+        ghToken(ctx);
         const cap = Math.max(1, Math.min(3000, Number(ctx.params?.max_gists ?? 300)));
 
         let created = 0;

@@ -329,5 +329,76 @@ await step('oversized selection is refused up front', async () => {
     console.log('  ✓ both refusals happen before the first request');
 });
 
+
+// ---- 10. processed-but-empty is a NORMAL return, never a throw ----------------------------------
+// The distinction this pins: a run that could not be carried out (no token, nothing selected of the
+// right kind) throws, because on this host a normal return is painted green and would read as a
+// verified negative. A run that WAS carried out and found nothing returns — an account with no
+// public activity, an organisation with no public members, an empty repository, a deleted account,
+// a search with no hits are all finished, correct answers. Conflating the two turns "we looked and
+// there is nothing" into "something broke", which is the wrong story in both directions.
+await step('a processed request with an empty result returns normally', async () => {
+    // A stub that answers every call with a well-formed EMPTY payload.
+    const empty = (graph, selection, body, params = {}) => {
+        const c = makeCtx(graph, selection, params);
+        c.net = { fetch: async (url) => ({
+            ok: true, status: 200, headers: {},
+            text: async () => JSON.stringify(typeof body === 'function' ? body(url) : body),
+        }) };
+        return c;
+    };
+    const g = makeGraph();
+    const acct = await g.createNode({ type: 'identity.account', data: { username: 'someone', platform: 'GitHub (User)' } });
+    const repo = await g.createNode({ type: 'web.url', data: { url: 'https://github.com/someone/thing' } });
+    const org = await g.createNode({ type: 'identity.organization', data: { name: 'Some Org', website: 'https://github.com/someorg' } });
+
+    // Timeline: the account exists, published nothing in the window.
+    const t = await byId.github_activity_timeline.run(empty(g, [acct.id], []));
+    console.log(show(t));
+    assert.equal(t.counts.quiet, 1, 'a silent account was not recorded as read-and-empty');
+
+    // Gists: none published.
+    const gi = await byId.github_gists.run(empty(g, [acct.id], []));
+    console.log(show(gi));
+
+    // Organisation with no public members.
+    const om = await byId.github_org_members.run(empty(g, [org.id], []));
+    console.log(show(om));
+
+    // An empty repository: GitHub answers, with no refs at all.
+    const er = await byId.github_commit_identities.run(
+        empty(g, [repo.id], { data: { repository: { isEmpty: true, defaultBranchRef: null, refs: { nodes: [], pageInfo: {} } } } }),
+    );
+    console.log(show(er));
+    assert.equal(er.counts.repositories, 1, 'an empty repository was not counted as processed');
+
+    // An account GitHub says does not exist.
+    const dead = await byId.github_account_repos.run(
+        empty(g, [acct.id], (u) => (u.includes('graphql') ? { data: { repositoryOwner: null } } : { items: [] })),
+    );
+    console.log(show(dead));
+    assert.equal(dead.counts.gone, 1, 'a deleted account was not recorded as answered-and-absent');
+
+    // Forks and Pages with nothing to report.
+    console.log(show(await byId.github_forks.run(empty(g, [repo.id], []))));
+    const pg = makeCtx(g, [repo.id]);
+    pg.net = { fetch: async () => ({ ok: false, status: 404, headers: {}, text: async () => '{"message":"Not Found"}' }) };
+    console.log(show(await byId.github_pages_domain.run(pg)));
+
+    console.log('  ✓ seven empty-but-processed outcomes, zero throws');
+});
+
+// ---- 11. …while an UNPROCESSABLE request still throws -------------------------------------------
+await step('an unprocessable request still throws', async () => {
+    const g = makeGraph();
+    const junk = await g.createNode({ type: 'identity.email_address', data: { email: 'x@y.z' } });
+    const noToken = makeCtx(g, [junk.id]);
+    noToken.config = {};
+    await assert.rejects(() => byId.github_gists.run(noToken), /token is not set/i);
+    await assert.rejects(() => byId.github_activity_timeline.run(makeCtx(g, [junk.id])), /names a GitHub account/i);
+    await assert.rejects(() => byId.github_commit_identities.run(makeCtx(g, [junk.id])), /is a GitHub repository URL/i);
+    console.log('  ✓ no token and nothing targetable both still throw');
+});
+
 console.log(failures ? `\n✗ ${failures} step(s) failed\n` : '\n✓ all steps passed\n');
 process.exit(failures ? 1 : 0);

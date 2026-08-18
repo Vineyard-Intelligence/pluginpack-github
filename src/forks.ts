@@ -15,14 +15,14 @@
 // behind it comes from running Commit Identities on that fork, which is why the fork URL is a node.
 import { definePlugin } from './sdk';
 import type { HostContext, RunResult } from './sdk';
-import { GH_PLATFORM, restPaged, lastPage, rest, repoOf, abortIf } from './gh';
+import { ghToken, GH_PLATFORM, restPaged, lastPage, rest, repoOf, abortIf } from './gh';
 
 export const forksWithCommits = definePlugin({
     manifest: {
         identifier: 'run.vineyard.plugins.github_forks',
         content_type: 'vineyard:plugin',
         name: 'GitHub Forks With Own Commits',
-        version: '1.0.0',
+        version: '1.1.0',
         description:
             'Finds the forks of a repository that have been pushed to since they were created, and adds each one as a URL node with its owner\'s account. Untouched forks — the large majority — are left out, because a fork button press says nothing about the person who pressed it. Work done in a fork never appears in the upstream history unless a pull request lands, so these owners are mostly people the upstream commit scan cannot reach; run Commit Identities on a fork URL to recover the identity behind it.',
         icon: 'git-fork',
@@ -87,6 +87,11 @@ export const forksWithCommits = definePlugin({
     async run(ctx: HostContext): Promise<RunResult> {
         const ids = ctx.input.selection;
         if (!ids.length) return { summary: 'Select a GitHub repository URL first', counts: {} };
+        // Token first, before anything about the selection is judged. It is a precondition of the
+        // whole run rather than of one node, and when both are wrong "this pack has no token" is the
+        // message that lets the analyst act — checking the selection first made the reported problem
+        // depend on which node happened to be selected.
+        ghToken(ctx);
         const cap = Math.max(1, Math.min(5000, Number(ctx.params?.max_forks ?? 200)));
         const workedOnly = ctx.params?.worked_only !== false;
 

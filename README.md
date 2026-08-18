@@ -99,6 +99,17 @@ Account Repositories records on each repository node and refuses a selection tha
 naming the total. When no count is known it refuses on the repository count instead and says that is
 why — a run whose size cannot be established should not begin silently.
 
+**An empty result is a result.** A run that could not be carried out throws — no token, or nothing
+selected that the plugin can act on — because on this host a normal return is reported as a
+successful run, so a swallowed failure reads as a verified negative. A run that WAS carried out and
+found nothing returns normally: an account with no public activity in GitHub's window, an
+organisation with no public members, an empty repository, an account GitHub says no longer exists, a
+search with no hits. These are finished, correct answers and the summary says which one happened.
+One dead URL in a large selection no longer discards everything collected before it either.
+
+The token is checked before the selection is judged, so when both are wrong the message names the
+one the analyst can fix.
+
 ## Code search is desktop-only
 
 GitHub answers `access-control-allow-origin: *` on every endpoint this pack uses — including the

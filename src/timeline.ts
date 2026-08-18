@@ -19,14 +19,14 @@
 // reason.
 import { definePlugin } from './sdk';
 import type { HostContext, RunResult } from './sdk';
-import { GH_PLATFORM, rest, loginOf, abortIf } from './gh';
+import { ghToken, GH_PLATFORM, rest, loginOf, abortIf } from './gh';
 
 export const activityTimeline = definePlugin({
     manifest: {
         identifier: 'run.vineyard.plugins.github_activity_timeline',
         content_type: 'vineyard:plugin',
         name: 'GitHub Activity Timeline',
-        version: '1.0.0',
+        version: '1.1.0',
         description:
             'Reads an account\'s recent public events and records which UTC hours it is active in, as fields on the account itself rather than as new nodes. Also records how many events the sample held and the real first and last timestamps, because GitHub caps this feed at roughly 300 events over 90 days — so a busy account\'s picture may cover a week and a quiet one\'s three months. Automation produces the tightest, most convincing-looking distributions of all, so read a sharp result as a scheduler until something else says otherwise.',
         icon: 'clock',
@@ -71,9 +71,16 @@ export const activityTimeline = definePlugin({
     async run(ctx: HostContext): Promise<RunResult> {
         const ids = ctx.input.selection;
         if (!ids.length) return { summary: 'Select a GitHub account first', counts: {} };
+        // Token first, before anything about the selection is judged. It is a precondition of the
+        // whole run rather than of one node, and when both are wrong "this pack has no token" is the
+        // message that lets the analyst act — checking the selection first made the reported problem
+        // depend on which node happened to be selected.
+        ghToken(ctx);
 
-        let profiled = 0;
-        let skipped = 0;
+        let profiled = 0;   // accounts that had events, so a histogram was written
+        let quiet = 0;      // accounts read successfully that published nothing in the window
+        let reached = 0;    // selected nodes that actually named a GitHub account
+        let skipped = 0;    // selected nodes that named none — the only kind that is a mis-target
         let totalEvents = 0;
 
         for (let i = 0; i < ids.length; i++) {
@@ -88,6 +95,7 @@ export const activityTimeline = definePlugin({
                 skipped++;
                 continue;
             }
+            reached++;
             ctx.progress?.set?.({
                 percent: Math.round((100 * i) / ids.length),
                 message: `${login} (${i + 1}/${ids.length})`,
@@ -107,8 +115,11 @@ export const activityTimeline = definePlugin({
             }
 
             if (!stamps.length) {
-                // Distinguish "no public activity" from "wrong node" — this one is a real answer.
-                skipped++;
+                // A real answer, not a failure: this account published nothing in the window GitHub
+                // keeps. Counted separately from `skipped`, which is for nodes that never named an
+                // account at all — the two must not be added together, because only the second one
+                // means the run could not do its job.
+                quiet++;
                 continue;
             }
 
@@ -143,17 +154,24 @@ export const activityTimeline = definePlugin({
             totalEvents += stamps.length;
         }
 
-        if (!profiled) {
+        // THROW ONLY WHEN THE REQUEST COULD NOT BE PROCESSED — i.e. nothing selected named a GitHub
+        // account. An account that simply has no public activity is a finished, correct answer, and
+        // reporting it as a failure would be a false negative dressed as an error.
+        if (!reached) {
             throw new Error(
-                `No public activity was read for any of the ${ids.length} selected node(s). Select a ` +
-                    `GitHub Account, Handle, or profile URL — and note that an account with no public ` +
-                    `events in the last 90 days returns nothing here.`,
+                `None of the ${ids.length} selected node(s) names a GitHub account — select an Account ` +
+                    `with a GitHub platform, a Handle, or a https://github.com/<login> URL.`,
             );
         }
 
         return {
-            summary: `${profiled} account(s) profiled from ${totalEvents} public event(s)${skipped ? ` — ${skipped} skipped` : ''}`,
-            counts: { accounts: profiled, events: totalEvents, skipped },
+            summary:
+                (profiled
+                    ? `${profiled} account(s) profiled from ${totalEvents} public event(s)`
+                    : `no public activity in GitHub's ~90-day window for ${quiet} account(s) — read, and empty`) +
+                (profiled && quiet ? `; ${quiet} had no public activity` : '') +
+                (skipped ? ` — ${skipped} selected node(s) were not GitHub accounts` : ''),
+            counts: { accounts: profiled, quiet, events: totalEvents, skipped },
         };
     },
 });

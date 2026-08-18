@@ -2,7 +2,7 @@
   "identifier": "run.vineyard.pluginpacks.github",
   "content_type": "vineyard:pluginpack",
   "name": "GitHub",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Recovers the people behind public GitHub activity. Expands an account into its repositories, then reads commit metadata across every branch and tag — never the code — for the email addresses, display names and former usernames contributors left in it. Also covers gists, organisation membership, activity hours, worked-on forks, Pages domains, and code search across every public repository. Needs a GitHub token.",
   "author": {
     "name": "VINEYARD",
@@ -25,7 +25,7 @@
   "distribution": {
     "kind": "git",
     "repository": "https://github.com/Vineyard-Intelligence/pluginpack-github",
-    "ref": "v1.2.0",
+    "ref": "v1.3.0",
     "path": "plugins/github.manifest.json"
   },
   "plugins": [
@@ -33,7 +33,7 @@
       "identifier": "run.vineyard.plugins.github_account_repos",
       "content_type": "vineyard:plugin",
       "name": "GitHub Account Repositories",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "description": "Expands a GitHub account (or a github.com profile URL) into its repositories, one URL node each, and enriches the account with the profile GitHub publishes — display name, company, location, website, and the numeric account id that survives a username change. Each repository node carries its commit count, so the cost of running Commit Identities on it is visible before you do. Optionally also finds repositories the account committed to but does not own.",
       "icon": "folder-git-2",
       "platforms": {
@@ -148,7 +148,7 @@
       "identifier": "run.vineyard.plugins.github_commit_identities",
       "content_type": "vineyard:plugin",
       "name": "GitHub Commit Identities",
-      "version": "1.2.0",
+      "version": "1.3.0",
       "description": "Reads the commit metadata of every branch and tag of the selected repositories — never the code — and recovers the identities in it: the email address each contributor committed under, their display name, their GitHub account, and any previous username still embedded in an older relay address. Addresses that belong to no GitHub account are kept rather than dropped: those are the raw local git configurations, and they are usually the ones worth having. Enabling email privacy on GitHub does not rewrite history, so a repository that predates it still carries the real address.",
       "icon": "git-commit-horizontal",
       "platforms": {
@@ -240,7 +240,7 @@
       "identifier": "run.vineyard.plugins.github_activity_timeline",
       "content_type": "vineyard:plugin",
       "name": "GitHub Activity Timeline",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "description": "Reads an account's recent public events and records which UTC hours it is active in, as fields on the account itself rather than as new nodes. Also records how many events the sample held and the real first and last timestamps, because GitHub caps this feed at roughly 300 events over 90 days — so a busy account's picture may cover a week and a quiet one's three months. Automation produces the tightest, most convincing-looking distributions of all, so read a sharp result as a scheduler until something else says otherwise.",
       "icon": "clock",
       "platforms": {
@@ -321,7 +321,7 @@
       "identifier": "run.vineyard.plugins.github_gists",
       "content_type": "vineyard:plugin",
       "name": "GitHub Gists",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "description": "Collects an account's public gists as URL nodes, carrying the file names, languages, description and dates as properties. Gists are where configuration fragments, scratch scripts and pasted output tend to end up, so they often hold detail the account's repositories do not.",
       "icon": "file-code",
       "platforms": {
@@ -414,7 +414,7 @@
       "identifier": "run.vineyard.plugins.github_org_members",
       "content_type": "vineyard:plugin",
       "name": "GitHub Organisation Members",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "description": "Lists the members of a GitHub organisation who have made their membership public, as account nodes linked to the organisation. Membership is private by default, so this is a lower bound rather than a roster — the total GitHub reports is recorded on the organisation node so the gap is visible.",
       "icon": "users",
       "platforms": {
@@ -508,7 +508,7 @@
       "identifier": "run.vineyard.plugins.github_forks",
       "content_type": "vineyard:plugin",
       "name": "GitHub Forks With Own Commits",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "description": "Finds the forks of a repository that have been pushed to since they were created, and adds each one as a URL node with its owner's account. Untouched forks — the large majority — are left out, because a fork button press says nothing about the person who pressed it. Work done in a fork never appears in the upstream history unless a pull request lands, so these owners are mostly people the upstream commit scan cannot reach; run Commit Identities on a fork URL to recover the identity behind it.",
       "icon": "git-fork",
       "platforms": {
