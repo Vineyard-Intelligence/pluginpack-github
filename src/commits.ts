@@ -33,6 +33,10 @@ import { GH_PLATFORM, gql, repoOf, classifyEmail, domainOf, abortIf } from './gh
  *  discover the cost by waiting. The Linux kernel is ~1.4M commits: ~700 requests. */
 const MAX_COMMITS = 100_000;
 
+/** Repositories in one run when NONE of them carries a commit count — the only case where the cost
+ *  cannot be summed in advance. Above this the run is refused rather than started blind. */
+const MAX_REPOS_PER_RUN = 20;
+
 /** Refs per request. Each is its own `history` connection of 100. */
 const REFS_PER_QUERY = 15;
 
@@ -76,7 +80,7 @@ export const commitIdentities = definePlugin({
         identifier: 'run.vineyard.plugins.github_commit_identities',
         content_type: 'vineyard:plugin',
         name: 'GitHub Commit Identities',
-        version: '1.0.0',
+        version: '1.2.0',
         description:
             'Reads the commit metadata of every branch and tag of the selected repositories — never the code — and recovers the identities in it: the email address each contributor committed under, their display name, their GitHub account, and any previous username still embedded in an older relay address. Addresses that belong to no GitHub account are kept rather than dropped: those are the raw local git configurations, and they are usually the ones worth having. Enabling email privacy on GitHub does not rewrite history, so a repository that predates it still carries the real address.',
         icon: 'git-commit-horizontal',
@@ -140,25 +144,63 @@ export const commitIdentities = definePlugin({
         let handles = 0;
         let scannedRepos = 0;
         let scannedCommits = 0;
-        let skipped = 0;
         let truncatedRefs = 0;
 
-        for (let i = 0; i < ids.length; i++) {
+        // ---- resolve the selection BEFORE opening a single request -------------------------------
+        //
+        // The host hands this plugin whatever was selected — it does not filter by the declared
+        // `consumes`, and neither does the agent — so a run started from "select everything" arrives
+        // holding emails, handles, gists and unrelated URLs alongside the repositories. Two things
+        // follow, and both have to happen here rather than inside the loop:
+        //
+        //   · Non-repositories are dropped without a request. `repoOf` is strict about the host for
+        //     this reason: `gist.github.com/<user>/<id>` used to parse as owner/repo, and the Gists
+        //     plugin in this very pack produces those nodes by the dozen.
+        //   · The total cost is known and refused UP FRONT when it cannot finish. Account
+        //     Repositories writes `commit_count` on every repository node it creates precisely so
+        //     this sum exists; a whole-project run over fifty repositories is otherwise an hour of
+        //     silent work whose only visible outcome is that it eventually stopped.
+        const targetsToScan: { id: string; repo: { owner: string; name: string; url: string }; cost: number | null }[] = [];
+        let skipped = 0;
+        for (const id of ids) {
+            const seed = await ctx.graph!.get!(id);
+            const repo = seed ? repoOf(seed) : null;
+            if (!seed || !repo) {
+                skipped++;
+                continue;
+            }
+            const c = Number((seed.data as any)?.commit_count);
+            targetsToScan.push({ id: String(seed.id), repo, cost: Number.isFinite(c) && c >= 0 ? c : null });
+        }
+
+        const known = targetsToScan.reduce((n, t) => n + (t.cost ?? 0), 0);
+        const unknown = targetsToScan.filter((t) => t.cost === null).length;
+        if (known > MAX_COMMITS) {
+            throw new Error(
+                `The ${targetsToScan.length} selected repositories hold ${known.toLocaleString()} commits between ` +
+                    `them — more than this plugin will walk in one run (${MAX_COMMITS.toLocaleString()}). Select fewer, ` +
+                    `or start with the ones whose commit_count is largest.`,
+            );
+        }
+        if (targetsToScan.length > MAX_REPOS_PER_RUN && unknown === targetsToScan.length) {
+            // No cost is known for any of them, so the sum above proved nothing. Fall back to a
+            // count, and say that is what happened rather than pretending to have measured.
+            throw new Error(
+                `${targetsToScan.length} repositories selected and none carries a commit count, so the size of ` +
+                    `this run cannot be established before it starts. Run GitHub Account Repositories first ` +
+                    `(it records the count), or select at most ${MAX_REPOS_PER_RUN} at a time.`,
+            );
+        }
+
+        for (let i = 0; i < targetsToScan.length; i++) {
             if (abortIf(ctx)) break;
-            const seed = await ctx.graph!.get!(ids[i]);
-            if (!seed) {
-                skipped++;
-                continue;
-            }
-            const repo = repoOf(seed);
-            if (!repo) {
-                skipped++;
-                continue;
-            }
+            const { id: seedId, repo } = targetsToScan[i];
+            const seed = await ctx.graph!.get!(seedId);
+            if (!seed) continue;
 
             ctx.progress?.set?.({
-                percent: Math.round((100 * i) / ids.length),
-                message: `${repo.owner}/${repo.name} (${i + 1}/${ids.length})`,
+                percent: Math.round((100 * i) / targetsToScan.length),
+                message: `${repo.owner}/${repo.name} (${i + 1}/${targetsToScan.length})`,
             });
 
             // ---- refs and size ---------------------------------------------------------------
@@ -192,10 +234,7 @@ export const commitIdentities = definePlugin({
             // commits and stops almost immediately.
             let targets = allRefs ? refNames : defaultRef ? [defaultRef] : [];
             if (defaultRef) targets = [defaultRef, ...targets.filter((n) => n !== defaultRef)];
-            if (!targets.length) {
-                skipped++;
-                continue;
-            }
+            if (!targets.length) continue;   // an empty repository: no refs to walk
 
             // ---- walk ------------------------------------------------------------------------
             const seenOids = new Set<string>();

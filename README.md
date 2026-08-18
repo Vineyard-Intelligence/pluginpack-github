@@ -84,6 +84,21 @@ there unless a pull request lands, so these are people the upstream scan structu
 produces the *tightest* distributions of all, so read a sharp result as a scheduler until something
 else says otherwise.
 
+**Junk in the selection costs nothing.** The host does not filter a run's selection by the plugin's
+declared `consumes` — neither the UI nor the agent — so "select everything and run" arrives holding
+every node in the project. Nodes that are not what a plugin needs are dropped *before* any request,
+and the host check is exact (`github.com` and `www.github.com` only). That precision matters more
+than it looks: a looser host pattern also matched `gist.github.com/<user>/<id>`, and the Gists plugin
+in this pack produces those by the dozen — so a whole-project run used to query GitHub for
+repositories that never existed, off nodes the pack had created itself. An organisation is likewise
+only queried when a github.com URL says it is one; its name alone is not evidence, and acting on a
+name would attach a coincidentally-identical GitHub org's members to an unrelated subject.
+
+**An oversized run is refused before it starts.** Commit Identities sums the `commit_count` that
+Account Repositories records on each repository node and refuses a selection that cannot finish,
+naming the total. When no count is known it refuses on the repository count instead and says that is
+why — a run whose size cannot be established should not begin silently.
+
 ## Code search is desktop-only
 
 GitHub answers `access-control-allow-origin: *` on every endpoint this pack uses — including the

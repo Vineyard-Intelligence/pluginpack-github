@@ -123,6 +123,35 @@ export function lastPage(link: string): number {
 
 // ---- identifying the things the analyst selected -------------------------------------------
 
+/**
+ * Is this the github.com web host — and ONLY that?
+ *
+ * Nothing but `github.com` and `www.github.com`. Not a subdomain, and the distinction is not
+ * academic: this started as /(^|\.)github\.com$/, which also matched `gist.github.com` — so a gist
+ * URL parsed as owner/repo and got queried as a repository. THIS PACK PRODUCES THOSE NODES: the
+ * Gists plugin writes one `https://gist.github.com/<user>/<id>` per gist, so selecting a whole
+ * project and running the commit walk sent GitHub a request for a repository that never existed,
+ * off a node the pack had created itself. Same for `raw.githubusercontent.com` and
+ * `objects.githubusercontent.com`, which appear in any graph that has touched a file URL.
+ *
+ * The trailing `$` is what refuses `github.com.evil.test`, and that is deliberate too — an
+ * allowlist that can be widened by choosing a hostname is not one.
+ */
+const isGithubWebHost = (h: string): boolean => /^(www\.)?github\.com$/i.test(h);
+
+/** Path segments that are github.com's own routes, not an account or an owner. */
+const RESERVED_OWNER = new Set([
+    'orgs', 'users', 'settings', 'search', 'topics', 'collections', 'sponsors', 'about', 'pricing',
+    'features', 'security', 'enterprise', 'marketplace', 'explore', 'notifications', 'issues',
+    'pulls', 'codespaces', 'new', 'login', 'join', 'apps', 'contact', 'site', 'readme', 'trending',
+]);
+
+/** Path segments that are a repository's own routes, so `/owner/repo/tree/main` still resolves to
+ *  `owner/repo` rather than being mistaken for something else. */
+const isRepoSubroute = (seg: string): boolean =>
+    ['tree', 'blob', 'commits', 'commit', 'issues', 'pull', 'pulls', 'releases', 'tags', 'wiki',
+     'actions', 'projects', 'security', 'pulse', 'graphs', 'settings', 'branches', 'compare'].includes(seg.toLowerCase());
+
 /** `owner/name` from a GitHub repository URL, or null when the node is not one. */
 export function repoOf(node: GraphNode): { owner: string; name: string; url: string } | null {
     const raw = typeof node.data?.url === 'string' ? node.data.url : '';
@@ -133,14 +162,16 @@ export function repoOf(node: GraphNode): { owner: string; name: string; url: str
     } catch {
         return null;
     }
-    if (!/(^|\.)github\.com$/i.test(u.hostname)) return null;
+    if (!isGithubWebHost(u.hostname)) return null;
     const seg = u.pathname.split('/').filter(Boolean);
     if (seg.length < 2) return null;
-    // Reserved first segments that look like an owner but are not one.
-    if (['orgs', 'users', 'settings', 'search', 'topics', 'collections', 'sponsors'].includes(seg[0].toLowerCase())) {
-        return null;
-    }
-    return { owner: seg[0], name: seg[1].replace(/\.git$/i, ''), url: `https://github.com/${seg[0]}/${seg[1].replace(/\.git$/i, '')}` };
+    if (RESERVED_OWNER.has(seg[0].toLowerCase())) return null;
+    // A deeper path is fine as long as the third segment is a repository route — anything else is
+    // some other github.com page that happens to be two segments deep.
+    if (seg.length > 2 && !isRepoSubroute(seg[2])) return null;
+    const name = seg[1].replace(/\.git$/i, '');
+    if (!name) return null;
+    return { owner: seg[0], name, url: `https://github.com/${seg[0]}/${name}` };
 }
 
 /** The GitHub login a selected node stands for: an account's username, or the owner segment of a
@@ -162,14 +193,61 @@ export function loginOf(node: GraphNode): string | null {
         const raw = typeof node.data?.url === 'string' ? node.data.url : '';
         try {
             const u = new URL(raw);
-            if (!/(^|\.)github\.com$/i.test(u.hostname)) return null;
+            // github.com only. `gist.github.com/<user>/<id>` is two segments and would otherwise be
+            // rejected anyway, but the host check is what keeps every other *.github.com page out.
+            if (!isGithubWebHost(u.hostname)) return null;
             const seg = u.pathname.split('/').filter(Boolean);
             if (seg.length !== 1) return null; // /owner only — /owner/repo is a repository
-            if (['orgs', 'settings', 'search', 'topics', 'about'].includes(seg[0].toLowerCase())) return null;
+            if (RESERVED_OWNER.has(seg[0].toLowerCase())) return null;
             return seg[0];
         } catch {
             return null;
         }
+    }
+    return null;
+}
+
+/**
+ * The GitHub organisation a selected node stands for — and null unless the node actually EVIDENCES
+ * one.
+ *
+ * The bare-name fallback that used to live here was a false-attribution bug: an
+ * `identity.organization` named "Acme", written by any other pack or by hand, was queried as
+ * `github.com/orgs/Acme`, and whatever unrelated GitHub organisation happened to own that name had
+ * its members attached to it. In a forensics graph an invented edge is worse than a missing one, so
+ * the name alone is no longer enough — a github.com URL has to say so.
+ */
+export function orgOf(node: GraphNode): string | null {
+    if (node.type === 'identity.organization') {
+        for (const field of ['website', 'url', 'profile_url'] as const) {
+            const v = String((node.data as any)?.[field] ?? '');
+            if (!v) continue;
+            try {
+                const u = new URL(v);
+                if (!isGithubWebHost(u.hostname)) continue;
+                const seg = u.pathname.split('/').filter(Boolean);
+                if (seg.length === 2 && seg[0].toLowerCase() === 'orgs') return seg[1];
+                if (seg.length === 1 && !RESERVED_OWNER.has(seg[0].toLowerCase())) return seg[0];
+            } catch {
+                /* not a URL — try the next field */
+            }
+        }
+        return null;
+    }
+    if (node.type === 'web.url') {
+        try {
+            const u = new URL(String(node.data?.url ?? ''));
+            if (!isGithubWebHost(u.hostname)) return null;
+            const seg = u.pathname.split('/').filter(Boolean);
+            if (seg.length === 2 && seg[0].toLowerCase() === 'orgs') return seg[1];
+            if (seg.length === 1 && !RESERVED_OWNER.has(seg[0].toLowerCase())) return seg[0];
+        } catch {
+            return null;
+        }
+    }
+    if (node.type === 'identity.account') {
+        const p = String(node.data?.platform ?? '').toLowerCase();
+        if (p.includes('github')) return String(node.data?.username ?? '').trim() || null;
     }
     return null;
 }

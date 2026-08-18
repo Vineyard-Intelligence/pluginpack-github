@@ -260,5 +260,74 @@ await step('Code Search (whole-graph, no selection)', async () => {
     console.log('  ✓ no selection needed, query not a node, cap reported, empty query throws');
 });
 
+
+// ---- 8. junk in the selection must cost NOTHING -------------------------------------------------
+// The host does not filter the selection by `consumes` — neither the UI nor the agent — so a run
+// started from "select everything" arrives holding every node in the project. What matters is not
+// only that the wrong ones are skipped, but that skipping them opens no request: a lookalike host
+// or a coincidentally-named organisation otherwise turns into a real query about a real stranger.
+await step('non-GitHub / wrong-type input makes no request at all', async () => {
+    const seen = [];
+    const dead = (graph, selection, params = {}) => {
+        const c = makeCtx(graph, selection, params);
+        c.net = { fetch: async (url) => { seen.push(url); throw new Error(`unexpected request: ${url}`); } };
+        return c;
+    };
+    const g8 = makeGraph();
+    const mk = async (type, data) => (await g8.createNode({ type, data })).id;
+    const junk = [
+        await mk('web.url', { url: 'https://example.com/foo/bar' }),                 // unrelated
+        await mk('web.url', { url: 'https://github.com.evil.test/o/r' }),            // lookalike host
+        await mk('web.url', { url: 'https://gist.github.com/someone/abc123' }),      // THIS PACK creates these
+        await mk('web.url', { url: 'https://raw.githubusercontent.com/o/r/main/x' }),// asset host
+        await mk('identity.email_address', { email: 'nobody@example.com' }),
+        await mk('identity.organization', { name: 'Acme' }),                          // no GitHub evidence
+        await mk('identity.organization', { name: 'Acme', website: 'https://acme.example' }),
+        await mk('identity.account', { username: 'bob', platform: 'Reddit' }),
+    ];
+    // github.com's OWN routes are junk to a repository plugin but not to every plugin —
+    // /orgs/<name> is a legitimate organisation reference, so it is only asserted where it is junk.
+    const ownRoutes = [
+        await mk('web.url', { url: 'https://github.com/orgs/acme' }),
+        await mk('web.url', { url: 'https://github.com/settings/profile' }),
+    ];
+    for (const name of ['github_commit_identities', 'github_forks', 'github_pages_domain']) {
+        await assert.rejects(() => byId[name].run(dead(g8, [...junk, ...ownRoutes])), /select|None of/i, `${name} did not refuse`);
+    }
+    for (const name of ['github_account_repos', 'github_gists', 'github_org_members']) {
+        await assert.rejects(() => byId[name].run(dead(g8, junk)), /select|None of/i, `${name} did not refuse`);
+    }
+    assert.deepEqual(seen, [], `a request was made for junk input: ${seen[0]}`);
+    console.log(`  ✓ 6 plugins over ${junk.length + ownRoutes.length} junk nodes → 0 requests`);
+});
+
+// ---- 9. a whole-project run is refused before it starts, not after it stalls --------------------
+await step('oversized selection is refused up front', async () => {
+    const seen = [];
+    const dead = (graph, selection) => {
+        const c = makeCtx(graph, selection);
+        c.net = { fetch: async (url) => { seen.push(url); throw new Error('should not run'); } };
+        return c;
+    };
+    // Known cost, too large: Account Repositories records commit_count for exactly this check.
+    const gA = makeGraph();
+    const big = [];
+    for (let i = 0; i < 12; i++) {
+        big.push((await gA.createNode({ type: 'web.url', data: { url: `https://github.com/o/r${i}`, commit_count: 20000 } })).id);
+    }
+    await assert.rejects(() => byId.github_commit_identities.run(dead(gA, big)), /more than this plugin will walk/i);
+
+    // Unknown cost, too many: refuse and say the size could not be established.
+    const gB = makeGraph();
+    const many = [];
+    for (let i = 0; i < 25; i++) {
+        many.push((await gB.createNode({ type: 'web.url', data: { url: `https://github.com/o/r${i}` } })).id);
+    }
+    await assert.rejects(() => byId.github_commit_identities.run(dead(gB, many)), /cannot be established|at most/i);
+
+    assert.deepEqual(seen, [], 'the refusal happened after a request had already gone out');
+    console.log('  ✓ both refusals happen before the first request');
+});
+
 console.log(failures ? `\n✗ ${failures} step(s) failed\n` : '\n✓ all steps passed\n');
 process.exit(failures ? 1 : 0);

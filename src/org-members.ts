@@ -5,48 +5,14 @@
 // written onto the organisation node so the reader can see how much of it was actually returned.
 import { definePlugin } from './sdk';
 import type { HostContext, RunResult } from './sdk';
-import { GH_PLATFORM, restPaged, lastPage, rest, abortIf } from './gh';
-
-/** The organisation login a selected node stands for. */
-function orgOf(node: { type: string; data: Record<string, unknown> }): string | null {
-    if (node.type === 'identity.organization') {
-        const site = String(node.data?.website ?? '');
-        try {
-            const u = new URL(site);
-            if (/(^|\.)github\.com$/i.test(u.hostname)) {
-                const seg = u.pathname.split('/').filter(Boolean);
-                if (seg.length === 1) return seg[0];
-            }
-        } catch {
-            /* fall through to the name */
-        }
-        const n = String(node.data?.name ?? '').trim();
-        return /^[A-Za-z0-9][A-Za-z0-9-]*$/.test(n) ? n : null;
-    }
-    if (node.type === 'web.url') {
-        try {
-            const u = new URL(String(node.data?.url ?? ''));
-            if (!/(^|\.)github\.com$/i.test(u.hostname)) return null;
-            const seg = u.pathname.split('/').filter(Boolean);
-            if (seg.length === 2 && seg[0].toLowerCase() === 'orgs') return seg[1];
-            if (seg.length === 1) return seg[0];
-        } catch {
-            return null;
-        }
-    }
-    if (node.type === 'identity.account') {
-        const p = String(node.data?.platform ?? '').toLowerCase();
-        if (p.includes('github')) return String(node.data?.username ?? '').trim() || null;
-    }
-    return null;
-}
+import { GH_PLATFORM, restPaged, lastPage, rest, orgOf, abortIf } from './gh';
 
 export const orgMembers = definePlugin({
     manifest: {
         identifier: 'run.vineyard.plugins.github_org_members',
         content_type: 'vineyard:plugin',
         name: 'GitHub Organisation Members',
-        version: '1.0.0',
+        version: '1.1.0',
         description:
             'Lists the members of a GitHub organisation who have made their membership public, as account nodes linked to the organisation. Membership is private by default, so this is a lower bound rather than a roster — the total GitHub reports is recorded on the organisation node so the gap is visible.',
         icon: 'users',
@@ -119,7 +85,7 @@ export const orgMembers = definePlugin({
                 skipped++;
                 continue;
             }
-            const org = orgOf(seed as any);
+            const org = orgOf(seed);
             if (!org) {
                 skipped++;
                 continue;
