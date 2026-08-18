@@ -2,8 +2,8 @@
   "identifier": "run.vineyard.pluginpacks.github",
   "content_type": "vineyard:pluginpack",
   "name": "GitHub",
-  "version": "1.0.0",
-  "description": "Recovers the people behind public GitHub activity. Expands an account into its repositories, then reads commit metadata across every branch and tag — never the code — for the email addresses, display names and former usernames contributors left in it. Also covers gists, organisation membership, activity hours, worked-on forks, and the domain a repository publishes on. Needs a GitHub token.",
+  "version": "1.1.0",
+  "description": "Recovers the people behind public GitHub activity. Expands an account into its repositories, then reads commit metadata across every branch and tag — never the code — for the email addresses, display names and former usernames contributors left in it. Also covers gists, organisation membership, activity hours, worked-on forks, Pages domains, and code search across every public repository. Needs a GitHub token.",
   "author": {
     "name": "VINEYARD",
     "url": "https://github.com/Vineyard-Intelligence"
@@ -25,7 +25,7 @@
   "distribution": {
     "kind": "git",
     "repository": "https://github.com/Vineyard-Intelligence/pluginpack-github",
-    "ref": "v1.0.0",
+    "ref": "v1.1.0",
     "path": "plugins/github.manifest.json"
   },
   "plugins": [
@@ -652,6 +652,93 @@
               "GET"
             ],
             "purpose": "Read the GitHub Pages configuration of the selected repository."
+          }
+        ],
+        "config": [
+          {
+            "key": "token",
+            "label": "GitHub personal access token",
+            "type": "string",
+            "secret": true,
+            "scope": "user",
+            "optional": false
+          }
+        ]
+      },
+      "lifecycle": {
+        "persistence": "opt-in",
+        "controls": [
+          "progress",
+          "cancel"
+        ],
+        "progress": "determinate"
+      }
+    },
+    {
+      "identifier": "run.vineyard.plugins.github_code_search",
+      "content_type": "vineyard:plugin",
+      "name": "GitHub Code Search",
+      "version": "1.1.0",
+      "description": "Searches the code of every public repository GitHub has indexed and turns the matches into repository and account nodes. Runs from a query rather than from a selected node. GitHub caps this at 1,000 results no matter how many exist and only searches default branches of indexed repositories, so narrow the query with user:, org: or repo: until the reported total is under a thousand — and read an empty result as \"not found in what was searched\", never as \"not on GitHub\". Desktop only: GitHub omits the CORS header from authenticated code-search responses specifically, so a browser cannot read them.",
+      "icon": "search-code",
+      "platforms": {
+        "primary": "desktop",
+        "desktop": {
+          "runtime": "sandbox-js",
+          "entry": "dist/pack.mjs",
+          "min_app_version": "0.1.0"
+        }
+      },
+      "io": {
+        "consumes": [],
+        "produces": [
+          {
+            "typepack": "run.vineyard.typepacks.infrastructure",
+            "category": "web",
+            "name": "url"
+          },
+          {
+            "typepack": "run.vineyard.typepacks.identity",
+            "category": "identity",
+            "name": "account"
+          }
+        ]
+      },
+      "params": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "title": "Search query",
+            "minLength": 1,
+            "description": "GitHub code search syntax. Scope it or the 1,000-result cap makes the answer arbitrary: \"AKIA\" user:someone · \"internal.example.com\" org:acme · filename:.env \"API_KEY\" · extension:tf \"access_key\"."
+          },
+          "max_results": {
+            "type": "integer",
+            "title": "Maximum results",
+            "default": 300,
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "GitHub will not return more than 1,000 for any query, whatever the total says."
+          }
+        },
+        "required": [
+          "query"
+        ]
+      },
+      "scopes": {
+        "graph": [
+          "node:read",
+          "node:create",
+          "edge:create"
+        ],
+        "network": [
+          {
+            "endpoint": "https://api.github.com/search",
+            "methods": [
+              "GET"
+            ],
+            "purpose": "Search public repository code for the query you enter."
           }
         ],
         "config": [

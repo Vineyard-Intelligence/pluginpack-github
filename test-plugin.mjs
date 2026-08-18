@@ -224,5 +224,41 @@ await step('wrong node type → throws rather than reporting an empty success', 
     console.log('  ✓ throws');
 });
 
+
+// ---- 7. code search ----------------------------------------------------------------------------
+// NOTE ON WHAT THIS CAN AND CANNOT SHOW. Node's fetch has no same-origin policy, so this exercises
+// the plugin's logic and the API contract but NOT the CORS behaviour that makes it desktop-only:
+// in a browser the same call is rejected before a status is visible. That part is verified by
+// reading the shell (renderer publishes declared network origins -> main process strips Origin and
+// injects the CORS headers) plus the measurement that GitHub omits the header only on authenticated
+// code search. It has not been run inside the packaged desktop app.
+await step('Code Search (whole-graph, no selection)', async () => {
+    const gs = makeGraph();
+    const ctx = makeCtx(gs, [], { query: `"BEGIN RSA PRIVATE KEY" user:${OWNER}`, max_results: 20 });
+    const res = await byId.github_code_search.run(ctx);
+    console.log(show(res));
+
+    // A whole-graph plugin must not depend on a selection.
+    assert.equal(ctx.input.selection.length, 0, 'the test passed a selection');
+    // The query itself must never become a node — it would be a hub linked to every match.
+    for (const n of gs.nodes.values()) {
+        assert.notEqual(n.type, 'endpoint.file', 'a match path became a file node');
+        assert.notEqual(String(n.data.url ?? ''), ctx.params.query, 'the query became a node');
+    }
+    // An honest zero is a RETURN (the search ran), not a throw.
+    assert.ok(typeof res.counts.total_reported === 'number', 'the reported total was not recorded');
+
+    // A broad query must say that it was capped rather than let the graph imply completeness.
+    const wide = await byId.github_code_search.run(
+        makeCtx(makeGraph(), [], { query: '"BEGIN RSA PRIVATE KEY"', max_results: 10 }),
+    );
+    console.log(show(wide));
+    assert.match(wide.summary, /returns at most 1,000|narrow the query/i, 'a capped search did not say so');
+
+    // A missing query is a mistake to raise, not an empty result.
+    await assert.rejects(() => byId.github_code_search.run(makeCtx(makeGraph(), [], {})), /Enter a search query/i);
+    console.log('  ✓ no selection needed, query not a node, cap reported, empty query throws');
+});
+
 console.log(failures ? `\n✗ ${failures} step(s) failed\n` : '\n✓ all steps passed\n');
 process.exit(failures ? 1 : 0);

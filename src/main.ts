@@ -16,17 +16,15 @@
 // that fails differently on every plugin, the token is required for all of them and its absence is
 // raised as an error, never returned as an empty result.
 //
-// WHY THERE IS NO CODE SEARCH PLUGIN. GitHub's code search API is reachable from neither egress
-// path this host offers, and this was measured rather than assumed:
-//   · `net.fetch` is the browser's own fetch and does send the token — but GitHub omits the CORS
-//     header from AUTHENTICATED code-search responses specifically (the keyless 401 carries it, the
-//     authenticated 200 does not), so the browser discards a response the server did send.
-//   · `net.probe` has no CORS to satisfy, but strips `authorization` by design — it is the
-//     anonymous path — so it arrives unauthenticated and gets 401.
-//   · `?access_token=` in the URL was removed by GitHub in 2021 and now 401s.
-// A plugin that could only ever return an empty result would be worse than no plugin, because on
-// this host an empty result reads as a completed search that found nothing — the exact false
-// negative someone checking whether a key leaked cannot afford.
+// CODE SEARCH IS DESKTOP-ONLY, and the reason is worth recording because it is not general. GitHub
+// answers `access-control-allow-origin: *` on every endpoint this pack uses EXCEPT authenticated
+// code search, where it omits the header entirely — the keyless 401 carries it, the authenticated
+// 200 does not. A browser therefore discards a response the server did send.
+//
+// The desktop shell resolves this through the manifest, not through code: the renderer publishes
+// every installed plugin's declared `network` ORIGINS to the main process, which then strips
+// `Origin` outbound and writes the CORS headers inbound for exactly those origins. So declaring the
+// endpoint is what makes the plugin work, and the request GitHub sees is an ordinary API call.
 import { definePluginPack } from './sdk';
 import { accountRepos } from './repos';
 import { commitIdentities } from './commits';
@@ -35,13 +33,14 @@ import { gists } from './gists';
 import { orgMembers } from './org-members';
 import { forksWithCommits } from './forks';
 import { pagesDomain } from './pages';
+import { codeSearch } from './code-search';
 
 export default definePluginPack({
     identifier: 'run.vineyard.pluginpacks.github',
     content_type: 'vineyard:pluginpack',
     name: 'GitHub',
-    version: '1.0.0',
+    version: '1.1.0',
     description:
-        'Recovers the people behind public GitHub activity. Expands an account into its repositories, then reads commit metadata across every branch and tag — never the code — for the email addresses, display names and former usernames contributors left in it. Also covers gists, organisation membership, activity hours, worked-on forks, and the domain a repository publishes on. Needs a GitHub token.',
-    plugins: [accountRepos, commitIdentities, activityTimeline, gists, orgMembers, forksWithCommits, pagesDomain],
+        'Recovers the people behind public GitHub activity. Expands an account into its repositories, then reads commit metadata across every branch and tag — never the code — for the email addresses, display names and former usernames contributors left in it. Also covers gists, organisation membership, activity hours, worked-on forks, Pages domains, and code search across every public repository. Needs a GitHub token.',
+    plugins: [accountRepos, commitIdentities, activityTimeline, gists, orgMembers, forksWithCommits, pagesDomain, codeSearch],
 });

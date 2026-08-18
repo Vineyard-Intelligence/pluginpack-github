@@ -6,11 +6,15 @@
 // answers `access-control-allow-origin: *` on every endpoint this pack touches, so the same code
 // runs in the browser and in the desktop shell.
 //
-// The one endpoint that does NOT work either way is `/search/code`: GitHub omits the CORS header
-// from AUTHENTICATED code-search responses only (verified: keyless 401 carries the header, the
-// authenticated 200 does not), so a browser discards a response the server did send, while `probe`
-// would reach it but arrives unauthenticated. `?access_token=` was removed by GitHub in 2021 and
-// now 401s. There is no code-search plugin in this pack for that reason.
+// `/search/code` is the one endpoint that needs more than that, and the fix is a manifest fact
+// rather than a code one. GitHub omits the CORS header from AUTHENTICATED code-search responses
+// only (measured: the keyless 401 carries it, the authenticated 200 does not), so a browser
+// discards a response the server did send. In the desktop shell the renderer publishes every
+// installed plugin's declared network ORIGINS to the main process, which strips `Origin` outbound
+// and writes the CORS headers inbound for those origins — so declaring the endpoint is what makes
+// Code Search work, and it is desktop-only for that reason alone. `probe` cannot substitute: it
+// drops `authorization`, so it would arrive unauthenticated. `?access_token=` was removed by GitHub
+// in 2021 and now 401s.
 import type { HostContext, GraphNode } from './sdk';
 
 /** The `platform` value every account node in this pack is written with.

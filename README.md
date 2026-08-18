@@ -19,6 +19,7 @@ used at the time.
 | **Organisation Members** | an organisation | the members who made their membership public |
 | **Forks With Own Commits** | repository URLs | fork owners who actually pushed to their copy, and the fork URL to follow them into |
 | **Pages Domain** | repository URLs | the domain a repository publishes on — the step that leaves GitHub |
+| **Code Search** | a query, no node | repositories and accounts whose code matches. Desktop only |
 
 Start with **Account Repositories**: it turns one account into the repository nodes the rest of the
 pack consumes, and the commit count it writes on each is what tells you whether scanning it is a few
@@ -83,21 +84,28 @@ there unless a pull request lands, so these are people the upstream scan structu
 produces the *tightest* distributions of all, so read a sharp result as a scheduler until something
 else says otherwise.
 
-## Why there is no code-search plugin
+## Code search is desktop-only
 
-GitHub's code search API cannot be reached from either egress path this host offers, and this was
-measured rather than assumed:
+GitHub answers `access-control-allow-origin: *` on every endpoint this pack uses — including the
+same search API for repositories and users — but omits it from **authenticated code-search
+responses** specifically. Measured both ways: the keyless 401 carries the header, the authenticated
+200 does not. So in a browser the response is discarded before its status is visible, even though
+the server did send the data.
 
-- `net.fetch` is the browser's own fetch and does send the token — but GitHub omits the CORS header
-  from **authenticated** code-search responses specifically. The keyless 401 carries it; the
-  authenticated 200 does not, so the browser discards a response the server did send.
-- `net.probe` has no CORS to satisfy, but strips `authorization` by design — it is the anonymous
-  path — so it arrives unauthenticated and gets a 401.
-- `?access_token=` in the URL was removed by GitHub in 2021 and now returns 401.
+The desktop shell fixes exactly this, and it does it **through the manifest rather than through any
+code in the plugin**. The renderer collects every installed plugin's declared `network` endpoints,
+publishes their origins to the main process, and the shell then strips `Origin` on the way out and
+writes the CORS headers on the way back — for those origins only, for as long as the project that
+declared them is open. The request GitHub sees is an ordinary API call from a script, which is why
+this works at all.
 
-A plugin that could only ever return an empty result would be worse than no plugin: an empty result
-reads as a completed search that found nothing, which is the exact false negative someone checking
-whether a key leaked cannot afford.
+Two limits are GitHub's own and no shell fixes them: it searches **default branches of indexed
+repositories only**, and it returns **at most 1,000 results** for any query however large the
+reported total. So scope the query with `user:`, `org:` or `repo:` until the total is under a
+thousand — and read an empty result as "not found in what was searched", never as "not on GitHub".
+That distinction is the whole reason the plugin reports the total alongside what it retrieved: on
+this host an empty return is painted as a successful run, and the query people most often bring here
+is "did my key leak".
 
 ## Build
 
@@ -116,6 +124,10 @@ every failure mode worth guarding against here is a property of the real respons
 the moment they are mocked. It was also worth writing — the first run caught a bot filter that
 deleted a sole maintainer's real email address, because in a single-author repository the author is,
 by definition, most of the commits.
+
+One thing it cannot show: Node's fetch has no same-origin policy, so the code-search step exercises
+the plugin and the API contract but not the CORS behaviour that makes it desktop-only. That part
+rests on reading the shell and on the header measurement above.
 
 ## Licence
 

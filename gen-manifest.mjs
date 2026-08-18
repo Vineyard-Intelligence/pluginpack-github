@@ -33,7 +33,9 @@ const platforms = {
  *  on every plugin would say nothing the pack has not already said. */
 function member(m) {
     const { author, license, ...rest } = m;
-    return { ...rest, platforms };
+    // A plugin may narrow its own platforms — Code Search is desktop-only because GitHub omits the
+    // CORS header from authenticated code-search responses, which only the shell's waiver fixes.
+    return { ...rest, platforms: m.platforms ?? platforms };
 }
 
 const manifest = {
