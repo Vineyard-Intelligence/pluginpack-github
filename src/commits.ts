@@ -21,7 +21,7 @@
 //     that leaks a machine hostname. On one repository 9 of 35 commits were exactly this.
 //  2. `committer` is not the author. On a sample of 100 commits from a busy repository, 52 carried
 //     the shared web-flow address noreply@github.com — one string every GitHub user merging through
-//     the web UI writes. As a node it is a permanent cross-case hub. Only `author` is read.
+//     the web UI writes. As a node it is a permanent cross-project hub. Only `author` is read.
 //  3. `?author=<login>` silently under-returns. Measured 36 of 52 commits across one account's
 //     repositories; the missing 16 were all commits made under a PREVIOUS username's noreply
 //     address. Not used anywhere.
