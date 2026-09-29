@@ -60,7 +60,7 @@ exactly this, and filtering on the linked login would have dropped all of them.
 
 **`committer` is never read.** On a 100-commit sample of a busy repository, 52 commits carried
 `noreply@github.com` — one string shared by every GitHub user who merges through the web UI. As a
-node it is a permanent cross-case hub.
+node it is a permanent cross-project hub.
 
 **`?author=<login>` is not used.** Measured: it returned 36 of 52 commits across one account's
 repositories. The missing 16 were all made under a *previous* username's relay address — which is
