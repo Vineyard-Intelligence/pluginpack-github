@@ -28,9 +28,8 @@ requests or a few hundred.
 ## Setup
 
 Add a GitHub personal access token in the pack's settings. A token with no scopes selected is
-enough — everything here reads public data. Every plugin requires it, and a missing token is raised
-as an error rather than returned as an empty result, because on this host an empty result is
-reported as a successful run that found nothing.
+enough — everything here reads public data. Every plugin requires it; without one the run fails with
+an error rather than returning an empty result.
 
 Without a token GitHub allows 60 requests an hour, which will not finish a single repository, and
 its GraphQL API — which is what makes the commit walk affordable — refuses unauthenticated requests
@@ -38,100 +37,68 @@ outright.
 
 ## Why it is shaped this way
 
-Each of these was measured against the live API, and several of them contradict the obvious
-approach.
+**Commit metadata, never commit contents.** Only author name, email and linked account are read per
+commit; no source diffs are fetched.
 
-**Commit metadata, never commit contents.** The history connection returns author name, email and
-linked account per commit. Fetching an individual commit instead would return `files[].patch` — the
-source diff — for data already in hand.
+**GraphQL, not REST `/commits`.** The same records at a fraction of the size, with several refs per
+request — a repository that is 119 REST pages is single-digit requests here.
 
-**GraphQL, not REST `/commits`.** The same records, but naming four fields costs ~190 bytes per
-commit against REST's ~4.6 KB, and several refs fit in one request as aliases. A repository that is
-119 REST pages is single-digit requests here. Checked against a `--filter=blob:none` bare clone of
-six repositories: identical author-email sets.
+**Every branch and tag, not just the default one.** A contributor whose only commits sit on a side
+branch is otherwise invisible.
 
-**Every branch and tag, not just the default one.** `/commits` stops at HEAD, so a contributor whose
-only commits sit on a side branch is invisible to it.
+**Addresses with no linked GitHub account are kept.** When GitHub does not recognise an address it
+is the raw local `.gitconfig` value, and it can carry a machine hostname.
 
-**Addresses with no linked GitHub account are kept.** When `author.user` is null, GitHub does not
-recognise the address — which is precisely what makes it interesting: it is the raw local
-`.gitconfig` value, and it can carry a machine hostname. On one repository, 9 of 35 commits were
-exactly this, and filtering on the linked login would have dropped all of them.
+**`committer` is never read.** It is mostly `noreply@github.com`, one string shared by every GitHub
+user who merges through the web UI — as a node, a permanent cross-project hub.
 
-**`committer` is never read.** On a 100-commit sample of a busy repository, 52 commits carried
-`noreply@github.com` — one string shared by every GitHub user who merges through the web UI. As a
-node it is a permanent cross-project hub.
-
-**`?author=<login>` is not used.** Measured: it returned 36 of 52 commits across one account's
-repositories. The missing 16 were all made under a *previous* username's relay address — which is
-the single most valuable thing in the set.
+**`?author=<login>` is not used.** It misses commits made under a *previous* username's relay
+address, which are the most valuable ones in the set.
 
 **Relay addresses do not become email nodes**, but their `{digits}+` prefix is kept as the account's
 numeric id, which survives a rename — and a relay address spelling a *different* login is recorded
 as a former username that `resolves_to` the current account.
 
-**Gist file names are properties, not nodes.** Across seven accounts, 542 gist files carried 392
-distinct names, and `gistfile1.txt` alone appeared 95 times across six owners. As nodes, those would
-fuse six unrelated subjects into one entity.
+**Gist file names are properties, not nodes.** Generic names such as `gistfile1.txt` recur across
+unrelated owners and would fuse them into one entity.
 
-**Untouched forks are left out.** Only 42% of a busy repository's forks had been pushed to after
-creation. A fork button press says nothing about the person who pressed it. Of the fork owners that
-survive the filter, only 7.8% also appear in the upstream commit history — work done in a fork stays
-there unless a pull request lands, so these are people the upstream scan structurally cannot see.
+**Untouched forks are left out.** A fork nobody pushed to says nothing about its owner. The owners
+that remain are often people the upstream scan cannot see, since work in a fork stays there unless a
+pull request lands.
 
-**Activity hours are fields, not a node.** A timezone node would be labelled by its name, so one
-`UTC+9` would merge every Korean, Japanese and eastern-Russian subject in the graph. And automation
-produces the *tightest* distributions of all, so read a sharp result as a scheduler until something
-else says otherwise.
+**Activity hours are fields, not a node.** A timezone node such as `UTC+9` would merge every subject
+in that zone. Automation produces the *tightest* distributions of all, so read a sharp result as a
+scheduler until something else says otherwise.
 
-**Junk in the selection costs nothing.** The host does not filter a run's selection by the plugin's
-declared `consumes` — neither the UI nor the agent — so "select everything and run" arrives holding
-every node in the project. Nodes that are not what a plugin needs are dropped *before* any request,
-and the host check is exact (`github.com` and `www.github.com` only). That precision matters more
-than it looks: a looser host pattern also matched `gist.github.com/<user>/<id>`, and the Gists plugin
-in this pack produces those by the dozen — so a whole-project run used to query GitHub for
-repositories that never existed, off nodes the pack had created itself. An organisation is likewise
-only queried when a github.com URL says it is one; its name alone is not evidence, and acting on a
-name would attach a coincidentally-identical GitHub org's members to an unrelated subject.
+**Junk in the selection costs nothing.** Nodes a plugin cannot use are dropped *before* any request,
+so "select everything and run" is safe. Only `github.com` and `www.github.com` URLs count, and an
+organisation is only queried when a github.com URL says it is one — its name alone is not evidence.
 
 **An oversized run is refused before it starts.** Commit Identities sums the `commit_count` that
 Account Repositories records on each repository node and refuses a selection that cannot finish,
 naming the total. When no count is known it refuses on the repository count instead and says that is
-why — a run whose size cannot be established should not begin silently.
+why.
 
-**An empty result is a result.** A run that could not be carried out throws — no token, or nothing
-selected that the plugin can act on — because on this host a normal return is reported as a
-successful run, so a swallowed failure reads as a verified negative. A run that WAS carried out and
-found nothing returns normally: an account with no public activity in GitHub's window, an
-organisation with no public members, an empty repository, an account GitHub says no longer exists, a
-search with no hits. These are finished, correct answers and the summary says which one happened.
-One dead URL in a large selection no longer discards everything collected before it either.
+**An empty result is a result.** A run that could not be carried out — no token, or nothing selected
+that the plugin can act on — fails with an error. A run that WAS carried out and found nothing
+succeeds: an account with no public activity in GitHub's window, an organisation with no public
+members, an empty repository, an account GitHub says no longer exists, a search with no hits. The
+summary says which one happened. One dead URL in a large selection does not discard everything
+collected before it.
 
 The token is checked before the selection is judged, so when both are wrong the message names the
 one the analyst can fix.
 
 ## Code search is desktop-only
 
-GitHub answers `access-control-allow-origin: *` on every endpoint this pack uses — including the
-same search API for repositories and users — but omits it from **authenticated code-search
-responses** specifically. Measured both ways: the keyless 401 carries the header, the authenticated
-200 does not. So in a browser the response is discarded before its status is visible, even though
-the server did send the data.
+GitHub omits the CORS header from **authenticated code-search responses** specifically, so a browser
+cannot read them. The desktop app can.
 
-The desktop shell fixes exactly this, and it does it **through the manifest rather than through any
-code in the plugin**. The renderer collects every installed plugin's declared `network` endpoints,
-publishes their origins to the main process, and the shell then strips `Origin` on the way out and
-writes the CORS headers on the way back — for those origins only, for as long as the project that
-declared them is open. The request GitHub sees is an ordinary API call from a script, which is why
-this works at all.
-
-Two limits are GitHub's own and no shell fixes them: it searches **default branches of indexed
-repositories only**, and it returns **at most 1,000 results** for any query however large the
-reported total. So scope the query with `user:`, `org:` or `repo:` until the total is under a
-thousand — and read an empty result as "not found in what was searched", never as "not on GitHub".
-That distinction is the whole reason the plugin reports the total alongside what it retrieved: on
-this host an empty return is painted as a successful run, and the query people most often bring here
-is "did my key leak".
+Two limits are GitHub's own: it searches **default branches of indexed repositories only**, and it
+returns **at most 1,000 results** for any query however large the reported total. So scope the query
+with `user:`, `org:` or `repo:` until the total is under a thousand — and read an empty result as
+"not found in what was searched", never as "not on GitHub". The plugin reports the total alongside
+what it retrieved.
 
 ## Build
 
@@ -145,15 +112,8 @@ GITHUB_TOKEN=<token> node test-plugin.mjs
 The manifest is generated from the built bundle rather than maintained by hand, so the declared
 scopes, parameters and versions cannot drift from the code they describe.
 
-`test-plugin.mjs` runs the pack against the live API with an in-memory graph. It is not a unit test:
-every failure mode worth guarding against here is a property of the real responses and disappears
-the moment they are mocked. It was also worth writing — the first run caught a bot filter that
-deleted a sole maintainer's real email address, because in a single-author repository the author is,
-by definition, most of the commits.
-
-One thing it cannot show: Node's fetch has no same-origin policy, so the code-search step exercises
-the plugin and the API contract but not the CORS behaviour that makes it desktop-only. That part
-rests on reading the shell and on the header measurement above.
+`test-plugin.mjs` runs the pack against the live API with an in-memory graph. It is not a unit test,
+and it does not exercise the CORS behaviour that makes code search desktop-only.
 
 ## Licence
 
