@@ -26,9 +26,9 @@ export const activityTimeline = definePlugin({
         identifier: 'run.vineyard.plugins.github_activity_timeline',
         content_type: 'vineyard:plugin',
         name: 'GitHub Activity Timeline',
-        version: '1.1.0',
+        version: '1.1.1',
         description:
-            'Reads an account\'s recent public events and records which UTC hours it is active in, as fields on the account itself rather than as new nodes. Also records how many events the sample held and the real first and last timestamps, because GitHub caps this feed at roughly 300 events over 90 days — so a busy account\'s picture may cover a week and a quiet one\'s three months. Automation produces the tightest, most convincing-looking distributions of all, so read a sharp result as a scheduler until something else says otherwise.',
+            'Reads up to ~300 recent public events (GitHub keeps at most 90 days) of each selected GitHub account, handle or profile URL and writes activity_hours_utc (24 hourly counts, UTC), events_sampled, activity_window_start/end and event_types onto the Account, creating it (\'github account\') when a handle or URL is selected. Creates no other nodes. Needs a GitHub token.',
         icon: 'clock',
         author: { name: 'VINEYARD', url: 'https://vineyard.run' },
         license: 'Apache-2.0',

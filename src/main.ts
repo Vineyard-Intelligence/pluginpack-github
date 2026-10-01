@@ -39,8 +39,8 @@ export default definePluginPack({
     identifier: 'run.vineyard.pluginpacks.github',
     content_type: 'vineyard:pluginpack',
     name: 'GitHub',
-    version: '1.3.0',
+    version: '1.3.1',
     description:
-        'Recovers the people behind public GitHub activity. Expands an account into its repositories, then reads commit metadata across every branch and tag — never the code — for the email addresses, display names and former usernames contributors left in it. Also covers gists, organisation membership, activity hours, worked-on forks, Pages domains, and code search across every public repository. Needs a GitHub token.',
+        'Collects public GitHub data: an account\'s repositories, the identities in commit metadata, gists, public organisation members, activity hours, worked-on forks, Pages domains and code search. Needs a GitHub personal access token.',
     plugins: [accountRepos, commitIdentities, activityTimeline, gists, orgMembers, forksWithCommits, pagesDomain, codeSearch],
 });

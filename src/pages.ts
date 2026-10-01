@@ -16,9 +16,9 @@ export const pagesDomain = definePlugin({
         identifier: 'run.vineyard.plugins.github_pages_domain',
         content_type: 'vineyard:plugin',
         name: 'GitHub Pages Domain',
-        version: '1.0.0',
+        version: '1.0.1',
         description:
-            'Checks whether each selected repository publishes a GitHub Pages site and, when it does, adds the domain it serves on as a node linked to the repository. This is the step that takes an investigation off GitHub: the resulting domain is the input the DNS, certificate and address plugins already know how to follow.',
+            'Checks each selected github.com repository URL for a GitHub Pages site and, when there is one, adds its custom or github.io domain as a Domain node and the site as a URL node (\'published site\'), both linked to the repository. Needs a GitHub token.',
         icon: 'globe',
         author: { name: 'VINEYARD', url: 'https://vineyard.run' },
         license: 'Apache-2.0',

@@ -15,9 +15,9 @@ export const gists = definePlugin({
         identifier: 'run.vineyard.plugins.github_gists',
         content_type: 'vineyard:plugin',
         name: 'GitHub Gists',
-        version: '1.1.0',
+        version: '1.1.1',
         description:
-            'Collects an account\'s public gists as URL nodes, carrying the file names, languages, description and dates as properties. Gists are where configuration fragments, scratch scripts and pasted output tend to end up, so they often hold detail the account\'s repositories do not.',
+            'Adds the public gists of each selected GitHub account, handle or profile URL as URL nodes (\'published this gist\') carrying the description, file_names, languages, file_count and dates, up to max_gists per account (default 300). Creates the Account (\'github account\') when a handle or URL is selected. Needs a GitHub token.',
         icon: 'file-code',
         author: { name: 'VINEYARD', url: 'https://vineyard.run' },
         license: 'Apache-2.0',

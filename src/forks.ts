@@ -22,9 +22,9 @@ export const forksWithCommits = definePlugin({
         identifier: 'run.vineyard.plugins.github_forks',
         content_type: 'vineyard:plugin',
         name: 'GitHub Forks With Own Commits',
-        version: '1.1.0',
+        version: '1.1.1',
         description:
-            'Finds the forks of a repository that have been pushed to since they were created, and adds each one as a URL node with its owner\'s account. Untouched forks — the large majority — are left out, because a fork button press says nothing about the person who pressed it. Work done in a fork never appears in the upstream history unless a pull request lands, so these owners are mostly people the upstream commit scan cannot reach; run Commit Identities on a fork URL to recover the identity behind it.',
+            'Lists the forks of each selected github.com repository URL (newest first, up to max_forks, default 200) and adds those pushed to after creation as URL nodes (\'forked from, and pushed to since\') with their owner\'s Account (\'owns this fork\'); worked_only off adds every fork. Writes forks_examined on the repository. Needs a GitHub token.',
         icon: 'git-fork',
         author: { name: 'VINEYARD', url: 'https://vineyard.run' },
         license: 'Apache-2.0',

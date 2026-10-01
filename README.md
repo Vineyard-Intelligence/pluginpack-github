@@ -18,7 +18,7 @@ used at the time.
 | **Gists** | an account | one URL node per public gist |
 | **Organisation Members** | an organisation | the members who made their membership public |
 | **Forks With Own Commits** | repository URLs | fork owners who actually pushed to their copy, and the fork URL to follow them into |
-| **Pages Domain** | repository URLs | the domain a repository publishes on — the step that leaves GitHub |
+| **Pages Domain** | repository URLs | the domain and site URL a repository publishes on |
 | **Code Search** | a query, no node | repositories and accounts whose code matches. Desktop only |
 
 Start with **Account Repositories**: it turns one account into the repository nodes the rest of the
