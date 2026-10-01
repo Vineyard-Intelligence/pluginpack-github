@@ -80,9 +80,9 @@ export const commitIdentities = definePlugin({
         identifier: 'run.vineyard.plugins.github_commit_identities',
         content_type: 'vineyard:plugin',
         name: 'GitHub Commit Identities',
-        version: '1.3.0',
+        version: '1.3.1',
         description:
-            'Reads the commit metadata of every branch and tag of the selected repositories — never the code — and recovers the identities in it: the email address each contributor committed under, their display name, their GitHub account, and any previous username still embedded in an older relay address. Addresses that belong to no GitHub account are kept rather than dropped: those are the raw local git configurations, and they are usually the ones worth having. Enabling email privacy on GitHub does not rewrite history, so a repository that predates it still carries the real address.',
+            'Reads the author name, email and linked login of every commit on all branches and tags (default branch only with all_refs off) of the selected github.com repository URLs. Creates each linked Account (\'authored commits in this repository\') with its commit addresses as Email Address nodes, Email Addresses registered to no GitHub account (linked to the repository), and former usernames from relay addresses as Handles (\'resolves_to\'); relay and placeholder addresses and [bot] logins are skipped. Refuses runs over 100,000 commits (summed commit_count, or one repository\'s default branch) or over 20 repositories when none carries commit_count. Needs a GitHub token.',
         icon: 'git-commit-horizontal',
         author: { name: 'VINEYARD', url: 'https://vineyard.run' },
         license: 'Apache-2.0',

@@ -32,9 +32,9 @@ export const codeSearch = definePlugin({
         identifier: 'run.vineyard.plugins.github_code_search',
         content_type: 'vineyard:plugin',
         name: 'GitHub Code Search',
-        version: '1.1.0',
+        version: '1.1.1',
         description:
-            'Searches the code of every public repository GitHub has indexed and turns the matches into repository and account nodes. Runs from a query rather than from a selected node. GitHub caps this at 1,000 results no matter how many exist and only searches default branches of indexed repositories, so narrow the query with user:, org: or repo: until the reported total is under a thousand — and read an empty result as "not found in what was searched", never as "not on GitHub". Desktop only: GitHub omits the CORS header from authenticated code-search responses specifically, so a browser cannot read them.',
+            'Searches the code of public GitHub repositories for the query entered in the Run dialog (no selection) and adds each match as a URL node linked to its repository\'s URL node, plus the owner\'s Account (\'owns repository\'). Searches only default branches of indexed repositories and returns at most 1,000 results (max_results, default 300); the summary reports GitHub\'s total. Desktop only. Needs a GitHub token.',
         icon: 'search-code',
         author: { name: 'VINEYARD', url: 'https://vineyard.run' },
         license: 'Apache-2.0',

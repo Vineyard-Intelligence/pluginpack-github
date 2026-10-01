@@ -52,9 +52,9 @@ export const accountRepos = definePlugin({
         identifier: 'run.vineyard.plugins.github_account_repos',
         content_type: 'vineyard:plugin',
         name: 'GitHub Account Repositories',
-        version: '1.1.0',
+        version: '1.1.1',
         description:
-            'Expands a GitHub account (or a github.com profile URL) into its repositories, one URL node each, and enriches the account with the profile GitHub publishes — display name, company, location, website, and the numeric account id that survives a username change. Each repository node carries its commit count, so the cost of running Commit Identities on it is visible before you do. Optionally also finds repositories the account committed to but does not own.',
+            'Expands each selected GitHub account, handle or github.com profile URL into its owned repositories (up to 1,000; forks only with include_forks) as URL nodes with commit_count, linked \'owns repository\' or \'organisation repository\', and its organisations (up to 20) as Organization nodes (\'member_of\'). Fills user_id, display_name and profile_url on the Account, creating it (\'github account\') when a handle or URL is selected. With include_contributed (default on), also adds repositories it committed to but does not own, from the first 100 commit-search results (\'committed to this repository\'). Needs a GitHub token.',
         icon: 'folder-git-2',
         author: { name: 'VINEYARD', url: 'https://vineyard.run' },
         license: 'Apache-2.0',

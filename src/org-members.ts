@@ -12,9 +12,9 @@ export const orgMembers = definePlugin({
         identifier: 'run.vineyard.plugins.github_org_members',
         content_type: 'vineyard:plugin',
         name: 'GitHub Organisation Members',
-        version: '1.2.0',
+        version: '1.2.1',
         description:
-            'Lists the members of a GitHub organisation who have made their membership public, as account nodes linked to the organisation. Membership is private by default, so this is a lower bound rather than a roster — the total GitHub reports is recorded on the organisation node so the gap is visible.',
+            'Lists the members of each selected GitHub organisation (an Organization whose website is a github.com URL, or a github.com/<org> URL) who made their membership public, as Account nodes linked \'member_of\'; up to max_members (default 500). Writes public_members_listed and public_members_pages on the Organization, creating it (\'github organisation\') when a URL is selected. Needs a GitHub token.',
         icon: 'users',
         author: { name: 'VINEYARD', url: 'https://vineyard.run' },
         license: 'Apache-2.0',
