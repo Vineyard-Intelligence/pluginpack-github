@@ -2,8 +2,8 @@
   "identifier": "run.vineyard.pluginpacks.github",
   "content_type": "vineyard:pluginpack",
   "name": "GitHub",
-  "version": "1.3.2",
-  "description": "Collects public GitHub data: an account's repositories, the identities in commit metadata, gists, public organisation members, activity hours, worked-on forks, Pages domains and code search. Needs a GitHub personal access token.",
+  "version": "1.3.3",
+  "description": "Collects public GitHub data: repositories, commit identities, gists, public organisation members, activity hours, worked-on forks, Pages domains and code search. Token: fine-grained (Public repositories, no permissions) or classic with no scopes.",
   "author": {
     "name": "VINEYARD",
     "url": "https://github.com/Vineyard-Intelligence"
@@ -25,7 +25,7 @@
   "distribution": {
     "kind": "git",
     "repository": "https://github.com/Vineyard-Intelligence/pluginpack-github",
-    "ref": "v1.3.2",
+    "ref": "v1.3.3",
     "path": "plugins/github.manifest.json"
   },
   "plugins": [
