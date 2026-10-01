@@ -52,7 +52,7 @@ export const accountRepos = definePlugin({
         identifier: 'run.vineyard.plugins.github_account_repos',
         content_type: 'vineyard:plugin',
         name: 'GitHub Account Repositories',
-        version: '1.1.1',
+        version: '1.1.2',
         description:
             'Expands each selected GitHub account, handle or github.com profile URL into its owned repositories (up to 1,000; forks only with include_forks) as URL nodes with commit_count, linked \'owns repository\' or \'organisation repository\', and its organisations (up to 20) as Organization nodes (\'member_of\'). Fills user_id, display_name and profile_url on the Account, creating it (\'github account\') when a handle or URL is selected. With include_contributed (default on), also adds repositories it committed to but does not own, from the first 100 commit-search results (\'committed to this repository\'). Needs a GitHub token.',
         icon: 'folder-git-2',
@@ -82,15 +82,14 @@ export const accountRepos = definePlugin({
                     type: 'boolean',
                     title: 'Include forked repositories',
                     default: false,
-                    description:
-                        'Forks are copies of somebody else’s project. Scanning one for commit identities returns the UPSTREAM contributors, who have nothing to do with this account.',
+                    description: 'Also add owned repositories that are forks (marked is_fork). Off: forks are skipped. Off by default.',
                 },
                 include_contributed: {
                     type: 'boolean',
-                    title: 'Also find repositories they only contributed to',
+                    title: 'Include contributed repositories',
                     default: true,
                     description:
-                        'Uses commit search to find repositories the account committed to without owning — often where the work-account and organisation activity is. Commit search also indexes forked copies, so on very active accounts some results are mirrors rather than real contributions.',
+                        'Also add repositories the account committed to but does not own, taken from the first 100 commit-search results. On by default.',
                 },
             },
         },

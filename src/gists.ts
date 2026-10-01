@@ -15,7 +15,7 @@ export const gists = definePlugin({
         identifier: 'run.vineyard.plugins.github_gists',
         content_type: 'vineyard:plugin',
         name: 'GitHub Gists',
-        version: '1.1.1',
+        version: '1.1.2',
         description:
             'Adds the public gists of each selected GitHub account, handle or profile URL as URL nodes (\'published this gist\') carrying the description, file_names, languages, file_count and dates, up to max_gists per account (default 300). Creates the Account (\'github account\') when a handle or URL is selected. Needs a GitHub token.',
         icon: 'file-code',
@@ -32,7 +32,11 @@ export const gists = definePlugin({
                 { typepack: 'run.vineyard.typepacks.identity', category: 'identity', name: 'handle' },
                 { typepack: 'run.vineyard.typepacks.infrastructure', category: 'web', name: 'url' },
             ],
-            produces: [{ typepack: 'run.vineyard.typepacks.infrastructure', category: 'web', name: 'url' }],
+            produces: [
+                { typepack: 'run.vineyard.typepacks.infrastructure', category: 'web', name: 'url' },
+                // The account, when a handle or profile URL is selected instead of an account node.
+                { typepack: 'run.vineyard.typepacks.identity', category: 'identity', name: 'account' },
+            ],
         },
         params: {
             type: 'object',
@@ -43,7 +47,7 @@ export const gists = definePlugin({
                     default: 300,
                     minimum: 1,
                     maximum: 3000,
-                    description: 'Read in pages of 100. Most accounts hold far fewer than this.',
+                    description: 'Gists read per account (1–3,000). Default 300.',
                 },
             },
         },

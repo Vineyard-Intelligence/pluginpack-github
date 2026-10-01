@@ -32,7 +32,7 @@ export const codeSearch = definePlugin({
         identifier: 'run.vineyard.plugins.github_code_search',
         content_type: 'vineyard:plugin',
         name: 'GitHub Code Search',
-        version: '1.1.1',
+        version: '1.1.2',
         description:
             'Searches the code of public GitHub repositories for the query entered in the Run dialog (no selection) and adds each match as a URL node linked to its repository\'s URL node, plus the owner\'s Account (\'owns repository\'). Searches only default branches of indexed repositories and returns at most 1,000 results (max_results, default 300); the summary reports GitHub\'s total. Desktop only. Needs a GitHub token.',
         icon: 'search-code',
@@ -58,7 +58,7 @@ export const codeSearch = definePlugin({
                     title: 'Search query',
                     minLength: 1,
                     description:
-                        'GitHub code search syntax. Scope it or the 1,000-result cap makes the answer arbitrary: "AKIA" user:someone · "internal.example.com" org:acme · filename:.env "API_KEY" · extension:tf "access_key".',
+                        'GitHub code search syntax, e.g. filename:.env "API_KEY" or "internal.example.com" org:acme. Required.',
                 },
                 max_results: {
                     type: 'integer',
@@ -66,7 +66,7 @@ export const codeSearch = definePlugin({
                     default: 300,
                     minimum: 1,
                     maximum: 1000,
-                    description: 'GitHub will not return more than 1,000 for any query, whatever the total says.',
+                    description: 'Matches to read (1–1,000). Default 300.',
                 },
             },
             required: ['query'],

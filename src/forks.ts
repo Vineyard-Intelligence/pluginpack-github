@@ -22,7 +22,7 @@ export const forksWithCommits = definePlugin({
         identifier: 'run.vineyard.plugins.github_forks',
         content_type: 'vineyard:plugin',
         name: 'GitHub Forks With Own Commits',
-        version: '1.1.1',
+        version: '1.1.2',
         description:
             'Lists the forks of each selected github.com repository URL (newest first, up to max_forks, default 200) and adds those pushed to after creation as URL nodes (\'forked from, and pushed to since\') with their owner\'s Account (\'owns this fork\'); worked_only off adds every fork. Writes forks_examined on the repository. Needs a GitHub token.',
         icon: 'git-fork',
@@ -45,19 +45,17 @@ export const forksWithCommits = definePlugin({
             properties: {
                 max_forks: {
                     type: 'integer',
-                    title: 'Maximum forks to examine',
+                    title: 'Maximum forks',
                     default: 200,
                     minimum: 1,
                     maximum: 5000,
-                    description:
-                        'How many forks to look at, newest first, in pages of 100. A popular repository can have tens of thousands; what was examined versus what exists is recorded on the repository node.',
+                    description: 'Forks examined per repository, newest first (1–5,000). Default 200.',
                 },
                 worked_only: {
                     type: 'boolean',
-                    title: 'Only forks that were pushed to',
+                    title: 'Only pushed-to forks',
                     default: true,
-                    description:
-                        'Turning this off adds every fork owner, most of whom only clicked a button. Measured: 58% of forks were never touched after creation.',
+                    description: 'On: adds only forks pushed to after they were created. Off: adds every examined fork. On by default.',
                 },
             },
         },
