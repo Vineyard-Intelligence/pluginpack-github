@@ -80,7 +80,7 @@ export const commitIdentities = definePlugin({
         identifier: 'run.vineyard.plugins.github_commit_identities',
         content_type: 'vineyard:plugin',
         name: 'GitHub Commit Identities',
-        version: '1.3.1',
+        version: '1.3.2',
         description:
             'Reads the author name, email and linked login of every commit on all branches and tags (default branch only with all_refs off) of the selected github.com repository URLs. Creates each linked Account (\'authored commits in this repository\') with its commit addresses as Email Address nodes, Email Addresses registered to no GitHub account (linked to the repository), and former usernames from relay addresses as Handles (\'resolves_to\'); relay and placeholder addresses and [bot] logins are skipped. Refuses runs over 100,000 commits (summed commit_count, or one repository\'s default branch) or over 20 repositories when none carries commit_count. Needs a GitHub token.',
         icon: 'git-commit-horizontal',
@@ -106,8 +106,7 @@ export const commitIdentities = definePlugin({
                     type: 'boolean',
                     title: 'Scan every branch and tag',
                     default: true,
-                    description:
-                        'Off scans only the default branch, which is what the REST commit list would give you. On a large public repository the difference measured ~1,000 extra commits and a handful of contributors who appear nowhere else.',
+                    description: 'On: reads commits on every branch and tag. Off: only the default branch.',
                 },
             },
         },

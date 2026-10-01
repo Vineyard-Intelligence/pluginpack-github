@@ -2,7 +2,7 @@
   "identifier": "run.vineyard.pluginpacks.github",
   "content_type": "vineyard:pluginpack",
   "name": "GitHub",
-  "version": "1.3.1",
+  "version": "1.3.2",
   "description": "Collects public GitHub data: an account's repositories, the identities in commit metadata, gists, public organisation members, activity hours, worked-on forks, Pages domains and code search. Needs a GitHub personal access token.",
   "author": {
     "name": "VINEYARD",
@@ -25,7 +25,7 @@
   "distribution": {
     "kind": "git",
     "repository": "https://github.com/Vineyard-Intelligence/pluginpack-github",
-    "ref": "v1.3.1",
+    "ref": "v1.3.2",
     "path": "plugins/github.manifest.json"
   },
   "plugins": [
@@ -33,7 +33,7 @@
       "identifier": "run.vineyard.plugins.github_account_repos",
       "content_type": "vineyard:plugin",
       "name": "GitHub Account Repositories",
-      "version": "1.1.1",
+      "version": "1.1.2",
       "description": "Expands each selected GitHub account, handle or github.com profile URL into its owned repositories (up to 1,000; forks only with include_forks) as URL nodes with commit_count, linked 'owns repository' or 'organisation repository', and its organisations (up to 20) as Organization nodes ('member_of'). Fills user_id, display_name and profile_url on the Account, creating it ('github account') when a handle or URL is selected. With include_contributed (default on), also adds repositories it committed to but does not own, from the first 100 commit-search results ('committed to this repository'). Needs a GitHub token.",
       "icon": "folder-git-2",
       "platforms": {
@@ -91,13 +91,13 @@
             "type": "boolean",
             "title": "Include forked repositories",
             "default": false,
-            "description": "Forks are copies of somebody else’s project. Scanning one for commit identities returns the UPSTREAM contributors, who have nothing to do with this account."
+            "description": "Also add owned repositories that are forks (marked is_fork). Off: forks are skipped. Off by default."
           },
           "include_contributed": {
             "type": "boolean",
-            "title": "Also find repositories they only contributed to",
+            "title": "Include contributed repositories",
             "default": true,
-            "description": "Uses commit search to find repositories the account committed to without owning — often where the work-account and organisation activity is. Commit search also indexes forked copies, so on very active accounts some results are mirrors rather than real contributions."
+            "description": "Also add repositories the account committed to but does not own, taken from the first 100 commit-search results. On by default."
           }
         }
       },
@@ -148,7 +148,7 @@
       "identifier": "run.vineyard.plugins.github_commit_identities",
       "content_type": "vineyard:plugin",
       "name": "GitHub Commit Identities",
-      "version": "1.3.1",
+      "version": "1.3.2",
       "description": "Reads the author name, email and linked login of every commit on all branches and tags (default branch only with all_refs off) of the selected github.com repository URLs. Creates each linked Account ('authored commits in this repository') with its commit addresses as Email Address nodes, Email Addresses registered to no GitHub account (linked to the repository), and former usernames from relay addresses as Handles ('resolves_to'); relay and placeholder addresses and [bot] logins are skipped. Refuses runs over 100,000 commits (summed commit_count, or one repository's default branch) or over 20 repositories when none carries commit_count. Needs a GitHub token.",
       "icon": "git-commit-horizontal",
       "platforms": {
@@ -196,7 +196,7 @@
             "type": "boolean",
             "title": "Scan every branch and tag",
             "default": true,
-            "description": "Off scans only the default branch, which is what the REST commit list would give you. On a large public repository the difference measured ~1,000 extra commits and a handful of contributors who appear nowhere else."
+            "description": "On: reads commits on every branch and tag. Off: only the default branch."
           }
         }
       },
@@ -321,7 +321,7 @@
       "identifier": "run.vineyard.plugins.github_gists",
       "content_type": "vineyard:plugin",
       "name": "GitHub Gists",
-      "version": "1.1.1",
+      "version": "1.1.2",
       "description": "Adds the public gists of each selected GitHub account, handle or profile URL as URL nodes ('published this gist') carrying the description, file_names, languages, file_count and dates, up to max_gists per account (default 300). Creates the Account ('github account') when a handle or URL is selected. Needs a GitHub token.",
       "icon": "file-code",
       "platforms": {
@@ -359,6 +359,11 @@
             "typepack": "run.vineyard.typepacks.infrastructure",
             "category": "web",
             "name": "url"
+          },
+          {
+            "typepack": "run.vineyard.typepacks.identity",
+            "category": "identity",
+            "name": "account"
           }
         ]
       },
@@ -371,7 +376,7 @@
             "default": 300,
             "minimum": 1,
             "maximum": 3000,
-            "description": "Read in pages of 100. Most accounts hold far fewer than this."
+            "description": "Gists read per account (1–3,000). Default 300."
           }
         }
       },
@@ -414,7 +419,7 @@
       "identifier": "run.vineyard.plugins.github_org_members",
       "content_type": "vineyard:plugin",
       "name": "GitHub Organisation Members",
-      "version": "1.2.1",
+      "version": "1.2.2",
       "description": "Lists the members of each selected GitHub organisation (an Organization whose website is a github.com URL, or a github.com/<org> URL) who made their membership public, as Account nodes linked 'member_of'; up to max_members (default 500). Writes public_members_listed and public_members_pages on the Organization, creating it ('github organisation') when a URL is selected. Needs a GitHub token.",
       "icon": "users",
       "platforms": {
@@ -464,7 +469,7 @@
             "default": 500,
             "minimum": 1,
             "maximum": 5000,
-            "description": "Read in pages of 100. What was taken versus what exists is recorded on the organisation node."
+            "description": "Public members read per organisation (1–5,000). Default 500."
           }
         }
       },
@@ -508,7 +513,7 @@
       "identifier": "run.vineyard.plugins.github_forks",
       "content_type": "vineyard:plugin",
       "name": "GitHub Forks With Own Commits",
-      "version": "1.1.1",
+      "version": "1.1.2",
       "description": "Lists the forks of each selected github.com repository URL (newest first, up to max_forks, default 200) and adds those pushed to after creation as URL nodes ('forked from, and pushed to since') with their owner's Account ('owns this fork'); worked_only off adds every fork. Writes forks_examined on the repository. Needs a GitHub token.",
       "icon": "git-fork",
       "platforms": {
@@ -549,17 +554,17 @@
         "properties": {
           "max_forks": {
             "type": "integer",
-            "title": "Maximum forks to examine",
+            "title": "Maximum forks",
             "default": 200,
             "minimum": 1,
             "maximum": 5000,
-            "description": "How many forks to look at, newest first, in pages of 100. A popular repository can have tens of thousands; what was examined versus what exists is recorded on the repository node."
+            "description": "Forks examined per repository, newest first (1–5,000). Default 200."
           },
           "worked_only": {
             "type": "boolean",
-            "title": "Only forks that were pushed to",
+            "title": "Only pushed-to forks",
             "default": true,
-            "description": "Turning this off adds every fork owner, most of whom only clicked a button. Measured: 58% of forks were never touched after creation."
+            "description": "On: adds only forks pushed to after they were created. Off: adds every examined fork. On by default."
           }
         }
       },
@@ -678,7 +683,7 @@
       "identifier": "run.vineyard.plugins.github_code_search",
       "content_type": "vineyard:plugin",
       "name": "GitHub Code Search",
-      "version": "1.1.1",
+      "version": "1.1.2",
       "description": "Searches the code of public GitHub repositories for the query entered in the Run dialog (no selection) and adds each match as a URL node linked to its repository's URL node, plus the owner's Account ('owns repository'). Searches only default branches of indexed repositories and returns at most 1,000 results (max_results, default 300); the summary reports GitHub's total. Desktop only. Needs a GitHub token.",
       "icon": "search-code",
       "platforms": {
@@ -711,7 +716,7 @@
             "type": "string",
             "title": "Search query",
             "minLength": 1,
-            "description": "GitHub code search syntax. Scope it or the 1,000-result cap makes the answer arbitrary: \"AKIA\" user:someone · \"internal.example.com\" org:acme · filename:.env \"API_KEY\" · extension:tf \"access_key\"."
+            "description": "GitHub code search syntax, e.g. filename:.env \"API_KEY\" or \"internal.example.com\" org:acme. Required."
           },
           "max_results": {
             "type": "integer",
@@ -719,7 +724,7 @@
             "default": 300,
             "minimum": 1,
             "maximum": 1000,
-            "description": "GitHub will not return more than 1,000 for any query, whatever the total says."
+            "description": "Matches to read (1–1,000). Default 300."
           }
         },
         "required": [
