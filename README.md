@@ -27,8 +27,8 @@ requests or a few hundred.
 
 ## Setup
 
-Add a GitHub personal access token in the pack's settings. A token with no scopes selected is
-enough — everything here reads public data. Every plugin requires it; without one the run fails with
+Add a GitHub personal access token in the pack's settings: fine-grained with Repository access
+"Public repositories" and no permissions, or classic with no scopes. Everything here reads public data. Every plugin requires it; without one the run fails with
 an error rather than returning an empty result.
 
 Without a token GitHub allows 60 requests an hour, which will not finish a single repository, and

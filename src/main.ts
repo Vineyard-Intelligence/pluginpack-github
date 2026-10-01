@@ -39,8 +39,8 @@ export default definePluginPack({
     identifier: 'run.vineyard.pluginpacks.github',
     content_type: 'vineyard:pluginpack',
     name: 'GitHub',
-    version: '1.3.2',
+    version: '1.3.3',
     description:
-        'Collects public GitHub data: an account\'s repositories, the identities in commit metadata, gists, public organisation members, activity hours, worked-on forks, Pages domains and code search. Needs a GitHub personal access token.',
+        'Collects public GitHub data: repositories, commit identities, gists, public organisation members, activity hours, worked-on forks, Pages domains and code search. Token: fine-grained (Public repositories, no permissions) or classic with no scopes.',
     plugins: [accountRepos, commitIdentities, activityTimeline, gists, orgMembers, forksWithCommits, pagesDomain, codeSearch],
 });
