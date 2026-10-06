@@ -19,6 +19,7 @@ used at the time.
 | **Organisation Members** | an organisation | the members who made their membership public |
 | **Forks With Own Commits** | repository URLs | fork owners who actually pushed to their copy, and the fork URL to follow them into |
 | **Pages Domain** | repository URLs | the domain and site URL a repository publishes on |
+| **GPG Keys** | an account | the GPG keys uploaded to it, and the addresses GitHub has verified on the account |
 | **Code Search** | a query, no node | repositories and accounts whose code matches. Desktop only |
 
 Start with **Account Repositories**: it turns one account into the repository nodes the rest of the
@@ -61,6 +62,10 @@ as a former username that `resolves_to` the current account.
 
 **Gist file names are properties, not nodes.** Generic names such as `gistfile1.txt` recur across
 unrelated owners and would fuse them into one entity.
+
+**Only verified GPG addresses become email nodes.** GitHub marks each address on an uploaded key as
+verified on the account or not. An unverified one is text the uploader typed into their own key, and
+anyone can type anyone's address, so it stays in the key's User IDs.
 
 **Untouched forks are left out.** A fork nobody pushed to says nothing about its owner. The owners
 that remain are often people the upstream scan cannot see, since work in a fork stays there unless a
@@ -106,7 +111,7 @@ what it retrieved.
 npm install
 npm run typecheck
 npm run build        # bundles dist/pack.mjs, then regenerates plugins/github.manifest.json from it
-GITHUB_TOKEN=<token> node test-plugin.mjs
+GITHUB_TOKEN=<token> node test-plugin.mjs   # without a token, only the stubbed steps run
 ```
 
 The manifest is generated from the built bundle rather than maintained by hand, so the declared

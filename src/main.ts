@@ -34,13 +34,14 @@ import { orgMembers } from './org-members';
 import { forksWithCommits } from './forks';
 import { pagesDomain } from './pages';
 import { codeSearch } from './code-search';
+import { gpgKeys } from './gpg-keys';
 
 export default definePluginPack({
     identifier: 'run.vineyard.pluginpacks.github',
     content_type: 'vineyard:pluginpack',
     name: 'GitHub',
-    version: '1.3.3',
+    version: '1.4.0',
     description:
-        'Collects public GitHub data: repositories, commit identities, gists, public organisation members, activity hours, worked-on forks, Pages domains and code search. Token: fine-grained (Public repositories, no permissions) or classic with no scopes.',
-    plugins: [accountRepos, commitIdentities, activityTimeline, gists, orgMembers, forksWithCommits, pagesDomain, codeSearch],
+        'Collects public GitHub data: repositories, commit identities, gists, public organisation members, activity hours, worked-on forks, Pages domains, GPG keys and code search. Token: fine-grained (Public repositories, no permissions) or classic with no scopes.',
+    plugins: [accountRepos, commitIdentities, activityTimeline, gists, orgMembers, forksWithCommits, pagesDomain, gpgKeys, codeSearch],
 });

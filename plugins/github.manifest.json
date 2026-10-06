@@ -2,8 +2,8 @@
   "identifier": "run.vineyard.pluginpacks.github",
   "content_type": "vineyard:pluginpack",
   "name": "GitHub",
-  "version": "1.3.3",
-  "description": "Collects public GitHub data: repositories, commit identities, gists, public organisation members, activity hours, worked-on forks, Pages domains and code search. Token: fine-grained (Public repositories, no permissions) or classic with no scopes.",
+  "version": "1.4.0",
+  "description": "Collects public GitHub data: repositories, commit identities, gists, public organisation members, activity hours, worked-on forks, Pages domains, GPG keys and code search. Token: fine-grained (Public repositories, no permissions) or classic with no scopes.",
   "author": {
     "name": "VINEYARD",
     "url": "https://github.com/Vineyard-Intelligence"
@@ -25,7 +25,7 @@
   "distribution": {
     "kind": "git",
     "repository": "https://github.com/Vineyard-Intelligence/pluginpack-github",
-    "ref": "v1.3.3",
+    "ref": "v1.4.0",
     "path": "plugins/github.manifest.json"
   },
   "plugins": [
@@ -657,6 +657,96 @@
               "GET"
             ],
             "purpose": "Read the GitHub Pages configuration of the selected repository."
+          }
+        ],
+        "config": [
+          {
+            "key": "token",
+            "label": "GitHub personal access token",
+            "type": "string",
+            "secret": true,
+            "scope": "user",
+            "optional": false
+          }
+        ]
+      },
+      "lifecycle": {
+        "persistence": "opt-in",
+        "controls": [
+          "progress",
+          "cancel"
+        ],
+        "progress": "determinate"
+      }
+    },
+    {
+      "identifier": "run.vineyard.plugins.github_gpg_keys",
+      "content_type": "vineyard:plugin",
+      "name": "GitHub GPG Keys",
+      "version": "1.0.0",
+      "description": "Reads the GPG keys uploaded to each selected GitHub account, handle or profile URL. Adds each key as a PGP Key node (fingerprint, key_id, creation and expiration date, user_ids, revocation, armored key) linked 'uploaded this GPG key', and each address GitHub has verified on the account as an Email Address node linked 'registered email on this account (GitHub GPG key)' from the Account and 'key bound to' from the key. Unverified addresses stay in the key's user_ids. Creates the Account ('github account') when a handle or URL is selected. Needs a GitHub token.",
+      "icon": "key",
+      "platforms": {
+        "primary": "web",
+        "web": {
+          "runtime": "sandbox-js",
+          "entry": "dist/pack.mjs"
+        },
+        "desktop": {
+          "runtime": "sandbox-js",
+          "entry": "dist/pack.mjs",
+          "min_app_version": "0.1.0"
+        }
+      },
+      "io": {
+        "consumes": [
+          {
+            "typepack": "run.vineyard.typepacks.identity",
+            "category": "identity",
+            "name": "account"
+          },
+          {
+            "typepack": "run.vineyard.typepacks.identity",
+            "category": "identity",
+            "name": "handle"
+          },
+          {
+            "typepack": "run.vineyard.typepacks.infrastructure",
+            "category": "web",
+            "name": "url"
+          }
+        ],
+        "produces": [
+          {
+            "typepack": "run.vineyard.typepacks.identity",
+            "category": "identity",
+            "name": "pgp_key"
+          },
+          {
+            "typepack": "run.vineyard.typepacks.identity",
+            "category": "identity",
+            "name": "email_address"
+          },
+          {
+            "typepack": "run.vineyard.typepacks.identity",
+            "category": "identity",
+            "name": "account"
+          }
+        ]
+      },
+      "scopes": {
+        "graph": [
+          "node:read",
+          "node:create",
+          "edge:create"
+        ],
+        "network": [
+          {
+            "endpoint": "https://api.github.com/users",
+            "methods": [
+              "GET"
+            ],
+            "purpose": "List the GPG keys uploaded to the selected account."
           }
         ],
         "config": [
