@@ -35,7 +35,7 @@ export const activityTimeline = definePlugin({
         platforms: {
             primary: 'web',
             web: { runtime: 'sandbox-js', entry: 'dist/pack.mjs' },
-            desktop: { runtime: 'sandbox-js', entry: 'dist/pack.mjs', min_app_version: '0.1.0' },
+            desktop: { runtime: 'sandbox-js', entry: 'dist/pack.mjs' },
         },
         io: {
             consumes: [

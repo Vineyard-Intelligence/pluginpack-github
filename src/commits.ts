@@ -89,7 +89,7 @@ export const commitIdentities = definePlugin({
         platforms: {
             primary: 'web',
             web: { runtime: 'sandbox-js', entry: 'dist/pack.mjs' },
-            desktop: { runtime: 'sandbox-js', entry: 'dist/pack.mjs', min_app_version: '0.1.0' },
+            desktop: { runtime: 'sandbox-js', entry: 'dist/pack.mjs' },
         },
         io: {
             consumes: [{ typepack: 'run.vineyard.typepacks.infrastructure', category: 'web', name: 'url' }],
@@ -160,8 +160,8 @@ export const commitIdentities = definePlugin({
         // follow, and both have to happen here rather than inside the loop:
         //
         //   · Non-repositories are dropped without a request. `repoOf` is strict about the host for
-        //     this reason: `gist.github.com/<user>/<id>` used to parse as owner/repo, and the Gists
-        //     plugin in this very pack produces those nodes by the dozen.
+        //     this reason: `gist.github.com/<user>/<id>` would otherwise parse as owner/repo, and the
+        //     Gists plugin in this very pack produces those nodes by the dozen.
         //   · The total cost is known and refused UP FRONT when it cannot finish. Account
         //     Repositories writes `commit_count` on every repository node it creates precisely so
         //     this sum exists; a whole-project run over fifty repositories is otherwise an hour of

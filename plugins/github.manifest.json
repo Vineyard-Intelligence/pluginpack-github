@@ -18,15 +18,8 @@
     },
     "desktop": {
       "runtime": "sandbox-js",
-      "entry": "dist/pack.mjs",
-      "min_app_version": "0.1.0"
+      "entry": "dist/pack.mjs"
     }
-  },
-  "distribution": {
-    "kind": "git",
-    "repository": "https://github.com/Vineyard-Intelligence/pluginpack-github",
-    "ref": "v1.4.0",
-    "path": "plugins/github.manifest.json"
   },
   "plugins": [
     {
@@ -44,8 +37,7 @@
         },
         "desktop": {
           "runtime": "sandbox-js",
-          "entry": "dist/pack.mjs",
-          "min_app_version": "0.1.0"
+          "entry": "dist/pack.mjs"
         }
       },
       "io": {
@@ -159,8 +151,7 @@
         },
         "desktop": {
           "runtime": "sandbox-js",
-          "entry": "dist/pack.mjs",
-          "min_app_version": "0.1.0"
+          "entry": "dist/pack.mjs"
         }
       },
       "io": {
@@ -251,8 +242,7 @@
         },
         "desktop": {
           "runtime": "sandbox-js",
-          "entry": "dist/pack.mjs",
-          "min_app_version": "0.1.0"
+          "entry": "dist/pack.mjs"
         }
       },
       "io": {
@@ -332,8 +322,7 @@
         },
         "desktop": {
           "runtime": "sandbox-js",
-          "entry": "dist/pack.mjs",
-          "min_app_version": "0.1.0"
+          "entry": "dist/pack.mjs"
         }
       },
       "io": {
@@ -430,8 +419,7 @@
         },
         "desktop": {
           "runtime": "sandbox-js",
-          "entry": "dist/pack.mjs",
-          "min_app_version": "0.1.0"
+          "entry": "dist/pack.mjs"
         }
       },
       "io": {
@@ -524,8 +512,7 @@
         },
         "desktop": {
           "runtime": "sandbox-js",
-          "entry": "dist/pack.mjs",
-          "min_app_version": "0.1.0"
+          "entry": "dist/pack.mjs"
         }
       },
       "io": {
@@ -619,8 +606,7 @@
         },
         "desktop": {
           "runtime": "sandbox-js",
-          "entry": "dist/pack.mjs",
-          "min_app_version": "0.1.0"
+          "entry": "dist/pack.mjs"
         }
       },
       "io": {
@@ -694,8 +680,7 @@
         },
         "desktop": {
           "runtime": "sandbox-js",
-          "entry": "dist/pack.mjs",
-          "min_app_version": "0.1.0"
+          "entry": "dist/pack.mjs"
         }
       },
       "io": {
@@ -780,8 +765,7 @@
         "primary": "desktop",
         "desktop": {
           "runtime": "sandbox-js",
-          "entry": "dist/pack.mjs",
-          "min_app_version": "0.1.0"
+          "entry": "dist/pack.mjs"
         }
       },
       "io": {

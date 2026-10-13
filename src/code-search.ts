@@ -40,7 +40,7 @@ export const codeSearch = definePlugin({
         license: 'Apache-2.0',
         platforms: {
             primary: 'desktop',
-            desktop: { runtime: 'sandbox-js', entry: 'dist/pack.mjs', min_app_version: '0.1.0' },
+            desktop: { runtime: 'sandbox-js', entry: 'dist/pack.mjs' },
         },
         io: {
             // Empty consumes => whole-graph plugin: launched globally, with no selection.

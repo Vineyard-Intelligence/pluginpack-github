@@ -21,12 +21,12 @@ if (!pack?.plugins?.length) {
     process.exit(1);
 }
 
-/** The pack-level block every member repeats. `entry` must be the bundle path, never "inline":
- *  a member declaring "inline" installs without error and then never appears in the plugin list. */
+/** The pack-level block every member repeats. `entry` must be the bundle path: a member whose
+ *  entry names no module installs without error and then never appears in the plugin list. */
 const platforms = {
     primary: 'web',
     web: { runtime: 'sandbox-js', entry: 'dist/pack.mjs' },
-    desktop: { runtime: 'sandbox-js', entry: 'dist/pack.mjs', min_app_version: '0.1.0' },
+    desktop: { runtime: 'sandbox-js', entry: 'dist/pack.mjs' },
 };
 
 /** `author` and `license` are pack-level only — the member schema rejects them, and repeating them
@@ -48,12 +48,6 @@ const manifest = {
     license: 'Apache-2.0',
     icon: 'github',
     platforms,
-    distribution: {
-        kind: 'git',
-        repository: 'https://github.com/Vineyard-Intelligence/pluginpack-github',
-        ref: `v${pack.version}`,
-        path: 'plugins/github.manifest.json',
-    },
     plugins: pack.plugins.map((p) => member(p.manifest)),
 };
 
