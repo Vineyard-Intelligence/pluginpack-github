@@ -40,7 +40,7 @@ export default definePluginPack({
     identifier: 'run.vineyard.pluginpacks.github',
     content_type: 'vineyard:pluginpack',
     name: 'GitHub',
-    version: '1.4.0',
+    version: '1.4.1',
     description:
         'Collects public GitHub data: repositories, commit identities, gists, public organisation members, activity hours, worked-on forks, Pages domains, GPG keys and code search. Token: fine-grained (Public repositories, no permissions) or classic with no scopes.',
     plugins: [accountRepos, commitIdentities, activityTimeline, gists, orgMembers, forksWithCommits, pagesDomain, gpgKeys, codeSearch],
