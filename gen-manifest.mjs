@@ -43,6 +43,7 @@ const manifest = {
     content_type: 'vineyard:pluginpack',
     name: pack.name,
     version: pack.version,
+    summary: pack.summary,
     description: pack.description,
     author: { name: 'VINEYARD', url: 'https://github.com/Vineyard-Intelligence' },
     license: 'Apache-2.0',
